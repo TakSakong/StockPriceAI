@@ -1,0 +1,42 @@
+# ══════════════════════════════════════════════════════════════
+#  AI Stock Analyzer — Requirements
+#  대상: macOS Apple Silicon (M1/M2/M3/M4) + Python 3.11
+#  설치:  pip install -r requirements.txt
+#
+#  XGBoost libomp 오류 시: brew install libomp
+#  LSTM 사용 시 추가:      pip install tensorflow-macos tensorflow-metal
+# ══════════════════════════════════════════════════════════════
+
+# ── Core ──────────────────────────────────────────────────────
+streamlit>=1.35.0
+pandas>=2.1.0,<3.0.0
+numpy>=1.26.0,<2.0.0
+
+# ── Finance Data ──────────────────────────────────────────────
+yfinance>=0.2.54
+requests>=2.31.0
+python-dateutil>=2.8.2
+lxml>=5.0.0
+
+# ── Machine Learning ──────────────────────────────────────────
+scikit-learn>=1.4.0,<2.0.0
+xgboost>=2.0.3
+
+# ── NLP ───────────────────────────────────────────────────────
+vaderSentiment>=3.3.2
+
+# ── Visualization ─────────────────────────────────────────────
+plotly>=5.20.0
+matplotlib>=3.8.0
+
+# ── Utilities ─────────────────────────────────────────────────
+pytz>=2024.1
+
+# ══════════════════════════════════════════════════════════════
+#  선택 패키지 (주석 해제 후 설치)
+# ══════════════════════════════════════════════════════════════
+# LSTM 모델 (Apple Silicon 전용, 별도 명령 권장):
+#   pip install tensorflow-macos tensorflow-metal
+#
+# FinBERT 감성 분석 (모델 ~500MB):
+#   pip install transformers torch tokenizers safetensors
