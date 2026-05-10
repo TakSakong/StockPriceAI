@@ -8,7 +8,6 @@ GET  /api/v1/scanner/cache/stats — 캐시 통계
 
 import logging
 import uuid
-from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -21,7 +20,7 @@ log = logging.getLogger("stockai.api.scanner")
 
 
 class ScanStartRequest(BaseModel):
-    tickers: Optional[List[str]] = Field(
+    tickers: list[str] | None = Field(
         default=None, description="스캔할 종목 목록. None이면 S&P 500 전체"
     )
     max_workers: int = Field(default=2, ge=1, le=4, description="병렬 워커 수")
@@ -46,10 +45,10 @@ class ScanStatusResponse(BaseModel):
     refreshed: int
     failed: int
     current_ticker: str
-    elapsed_sec: Optional[float] = None
-    eta_sec: Optional[float] = None
-    results: List[Dict] = []
-    error: Optional[str] = None
+    elapsed_sec: float | None = None
+    eta_sec: float | None = None
+    results: list[dict] = []
+    error: str | None = None
 
 
 @router.post("/start", response_model=ScanStartResponse, summary="배치 스캔 시작")
@@ -122,7 +121,7 @@ async def get_scan_status(job_id: str):
     )
 
 
-@router.get("/tickers", response_model=List[str], summary="S&P 500 종목 목록")
+@router.get("/tickers", response_model=list[str], summary="S&P 500 종목 목록")
 async def list_tickers():
     """스캐너에서 사용하는 S&P 500 종목 코드 목록을 반환합니다."""
     return SP500_TICKERS

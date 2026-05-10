@@ -5,12 +5,10 @@
 - 포트폴리오 성과 차트
 """
 
+
 import pandas as pd
-import numpy as np
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from typing import Optional, Dict
-
 
 DARK_THEME = dict(
     bg='#0d1117',
@@ -36,8 +34,8 @@ def create_main_chart(
     show_ma: bool = True,
     show_bb: bool = True,
     show_volume: bool = True,
-    signal: Optional[str] = None,
-    display_days: Optional[int] = None,
+    signal: str | None = None,
+    display_days: int | None = None,
 ) -> go.Figure:
     """
     메인 캔들스틱 차트 + 기술적 지표 오버레이
@@ -56,7 +54,11 @@ def create_main_chart(
     
     rows = 3 if show_volume else 2
     row_heights = [0.6, 0.25, 0.15] if show_volume else [0.65, 0.35]
-    subplot_titles = [f'{ticker} Price Chart', 'RSI (14)', 'Volume'] if show_volume else [f'{ticker} Price Chart', 'RSI (14)']
+    subplot_titles = (
+        [f"{ticker} Price Chart", "RSI (14)", "Volume"]
+        if show_volume
+        else [f"{ticker} Price Chart", "RSI (14)"]
+    )
     
     fig = make_subplots(
         rows=rows, cols=1,
@@ -136,7 +138,9 @@ def create_main_chart(
         )
         
         # 과매수/과매도 기준선
-        for level, color, label in [(70, T['red'], 'Overbought'), (30, T['green'], 'Oversold'), (50, T['grid'], '')]:
+        for level, color, label in [
+            (70, T["red"], "Overbought"), (30, T["green"], "Oversold"), (50, T["grid"], "")
+        ]:
             fig.add_hline(
                 y=level, line_dash="dash", line_color=color,
                 line_width=1, opacity=0.6, row=2, col=1
@@ -188,7 +192,12 @@ def create_main_chart(
         d_start = display_df.index[0]
         d_end   = display_df.index[-1]
         if hasattr(d_start, 'strftime'):
-            date_range_str = f" <span style='color:#475569;font-size:13px'>({d_start.strftime('%Y-%m-%d')} ~ {d_end.strftime('%Y-%m-%d')}, {len(display_df):,}일)</span>"
+            s = d_start.strftime("%Y-%m-%d")
+            e = d_end.strftime("%Y-%m-%d")
+            date_range_str = (
+                f" <span style='color:#475569;font-size:13px'>"
+                f"({s} ~ {e}, {len(display_df):,}일)</span>"
+            )
 
     fig.update_layout(
         title=dict(
@@ -231,7 +240,7 @@ def create_main_chart(
     return fig
 
 
-def create_macd_chart(df: pd.DataFrame, display_days: Optional[int] = None) -> go.Figure:
+def create_macd_chart(df: pd.DataFrame, display_days: int | None = None) -> go.Figure:
     """MACD 차트  display_days=None → 전체 표시"""
     T = DARK_THEME
     if display_days and display_days > 0:
@@ -338,13 +347,13 @@ def create_sentiment_gauge(sentiment_score: float) -> go.Figure:
         color = T['orange']
         label = '중립 (Neutral)'
     
+    gauge_title = f'뉴스 감성 지수<br><span style="font-size:14px;color:{T["text"]}">{label}</span>'
     fig = go.Figure(go.Indicator(
         mode="gauge+number+delta",
         value=gauge_val,
         delta={'reference': 50, 'suffix': '%'},
         number={'suffix': '%', 'font': {'size': 28, 'color': color}},
-        title={'text': f'뉴스 감성 지수<br><span style="font-size:14px;color:{T["text"]}">{label}</span>',
-               'font': {'size': 14, 'color': T['title']}},
+        title={'text': gauge_title, 'font': {'size': 14, 'color': T['title']}},
         gauge={
             'axis': {'range': [0, 100], 'tickwidth': 1, 'tickcolor': T['text']},
             'bar': {'color': color, 'thickness': 0.3},

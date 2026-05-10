@@ -1,7 +1,6 @@
 """GET /api/v1/technical/{ticker} — 기술적 지표"""
 
 import logging
-from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -20,9 +19,9 @@ class TechnicalResponse(BaseModel):
     ticker: str
     period_days: int
     data_points: int
-    signals: Dict[str, SignalItem]
-    support_resistance: Dict[str, float]
-    latest_indicators: Dict[str, Optional[float]]
+    signals: dict[str, SignalItem]
+    support_resistance: dict[str, float]
+    latest_indicators: dict[str, float | None]
     ma_trend: str
     overall_signal: str
 
@@ -40,7 +39,11 @@ async def get_technical(
     """
     try:
         from ....services.fetcher import fetch_stock_data
-        from ....services.technical import add_all_indicators, get_current_signals, get_support_resistance
+        from ....services.technical import (
+            add_all_indicators,
+            get_current_signals,
+            get_support_resistance,
+        )
 
         ticker = ticker.strip().upper()
         df, _ = fetch_stock_data(ticker, period_days=period_days)
@@ -57,7 +60,7 @@ async def get_technical(
 
         latest = df.iloc[-1]
 
-        def safe_float(col: str) -> Optional[float]:
+        def safe_float(col: str) -> float | None:
             try:
                 return round(float(latest[col]), 4) if col in df.columns else None
             except Exception:

@@ -2,7 +2,6 @@
 Hybrid Indicator Engineering Module
 """
 
-from typing import Tuple
 
 import numpy as np
 import pandas as pd
@@ -26,7 +25,7 @@ def calculate_rsi(series: pd.Series, window: int = 14) -> pd.Series:
 
 def calculate_macd(
     series: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
-) -> Tuple[pd.Series, pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series, pd.Series]:
     ema_fast = calculate_ema(series, fast)
     ema_slow = calculate_ema(series, slow)
     macd_line = ema_fast - ema_slow
@@ -36,15 +35,15 @@ def calculate_macd(
 
 def calculate_bollinger_bands(
     series: pd.Series, window: int = 20, num_std: float = 2.0
-) -> Tuple[pd.Series, pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series, pd.Series]:
     middle = calculate_sma(series, window)
     std = series.rolling(window=window, min_periods=1).std()
     return middle + std * num_std, middle, middle - std * num_std
 
 
 def calculate_atr(df: pd.DataFrame, window: int = 14) -> pd.Series:
-    h, l, c = df["High"], df["Low"], df["Close"]
-    tr = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
+    hi, lo, c = df["High"], df["Low"], df["Close"]
+    tr = pd.concat([hi - lo, (hi - c.shift()).abs(), (lo - c.shift()).abs()], axis=1).max(axis=1)
     return tr.ewm(com=window - 1, min_periods=window).mean()
 
 
@@ -55,7 +54,7 @@ def calculate_obv(df: pd.DataFrame) -> pd.Series:
 
 def calculate_stochastic(
     df: pd.DataFrame, k_window: int = 14, d_window: int = 3
-) -> Tuple[pd.Series, pd.Series]:
+) -> tuple[pd.Series, pd.Series]:
     low_min = df["Low"].rolling(window=k_window, min_periods=1).min()
     high_max = df["High"].rolling(window=k_window, min_periods=1).max()
     denom = (high_max - low_min).replace(0, np.nan)

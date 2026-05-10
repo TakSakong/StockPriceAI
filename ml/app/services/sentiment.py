@@ -15,7 +15,6 @@ import re
 import warnings
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -50,7 +49,7 @@ def _parse_rss_date(date_str: str) -> datetime:
     return datetime.now()
 
 
-def _parse_yf_news_item(item: dict) -> Optional[dict]:
+def _parse_yf_news_item(item: dict) -> dict | None:
     try:
         title = publisher = link = ""
         pub_dt = datetime.now()
@@ -98,7 +97,7 @@ def _parse_yf_news_item(item: dict) -> Optional[dict]:
         return None
 
 
-def _fetch_yfinance_news(ticker: str, max_news: int = 30) -> List[Dict]:
+def _fetch_yfinance_news(ticker: str, max_news: int = 30) -> list[dict]:
     news_list = []
     try:
         import yfinance as yf
@@ -114,7 +113,7 @@ def _fetch_yfinance_news(ticker: str, max_news: int = 30) -> List[Dict]:
     return news_list
 
 
-def _fetch_yahoo_rss(ticker: str, max_news: int = 20) -> List[Dict]:
+def _fetch_yahoo_rss(ticker: str, max_news: int = 20) -> list[dict]:
     url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US"
     news_list = []
     try:
@@ -153,7 +152,7 @@ def _fetch_yahoo_rss(ticker: str, max_news: int = 20) -> List[Dict]:
 
 def _fetch_google_news_rss(
     ticker: str, company_name: str = "", max_news: int = 15
-) -> List[Dict]:
+) -> list[dict]:
     query = company_name if company_name else ticker
     query_enc = requests.utils.quote(f"{query} stock")
     url = f"https://news.google.com/rss/search?q={query_enc}&hl=en-US&gl=US&ceid=US:en"
@@ -197,9 +196,9 @@ def _fetch_google_news_rss(
     return news_list
 
 
-def fetch_news(ticker: str, company_name: str = "", max_news: int = 30) -> List[Dict]:
+def fetch_news(ticker: str, company_name: str = "", max_news: int = 30) -> list[dict]:
     """yfinance → Yahoo RSS → Google RSS 순서로 뉴스 수집."""
-    all_news: List[Dict] = []
+    all_news: list[dict] = []
     seen_titles: set = set()
 
     for source_fn, args in [
@@ -290,7 +289,7 @@ def _scores_to_label(compound: float) -> tuple:
     return "NEUTRAL", "NEUTRAL"
 
 
-def analyze_sentiment_vader(text: str) -> Dict:
+def analyze_sentiment_vader(text: str) -> dict:
     scores = _get_vader().polarity_scores(text)
     compound = scores["compound"]
     label, _ = _scores_to_label(compound)
@@ -304,7 +303,7 @@ def analyze_sentiment_vader(text: str) -> Dict:
 
 
 _finbert_pipeline = None
-_finbert_ok: Optional[bool] = None
+_finbert_ok: bool | None = None
 
 
 def _finbert_available() -> bool:
@@ -337,14 +336,16 @@ def _get_finbert():
     return _finbert_pipeline
 
 
-def analyze_sentiment_finbert(text: str) -> Dict:
+def analyze_sentiment_finbert(text: str) -> dict:
     pipe = _get_finbert()
     if pipe is None:
         return analyze_sentiment_vader(text)
     try:
         res = pipe(text[:500])[0]
         scores = {r["label"].lower(): r["score"] for r in res}
-        pos, neg, neu = scores.get("positive", 0), scores.get("negative", 0), scores.get("neutral", 0)
+        pos = scores.get("positive", 0)
+        neg = scores.get("negative", 0)
+        neu = scores.get("neutral", 0)
         compound = pos - neg
         label, _ = _scores_to_label(compound)
         return {
@@ -405,9 +406,13 @@ _PERSISTENCE_MAP = {
     "general": 0.3,
 }
 
-_MACRO_KNOWLEDGE_GRAPH: Dict[str, Dict[str, float]] = {
-    "rate_hike": {"Technology": -0.80, "Real Estate": -0.75, "Utilities": -0.60, "Financials": +0.60},
-    "rate_cut": {"Technology": +0.80, "Real Estate": +0.75, "Utilities": +0.55, "Financials": -0.40},
+_MACRO_KNOWLEDGE_GRAPH: dict[str, dict[str, float]] = {
+    "rate_hike": {
+        "Technology": -0.80, "Real Estate": -0.75, "Utilities": -0.60, "Financials": +0.60
+    },
+    "rate_cut": {
+        "Technology": +0.80, "Real Estate": +0.75, "Utilities": +0.55, "Financials": -0.40
+    },
     "geopolitical_crisis": {"Energy": +0.90, "Industrials": +0.70, "Technology": -0.60},
     "inflation_surge": {"Energy": +0.80, "Materials": +0.70, "Technology": -0.55},
     "recession": {"Consumer Discretionary": -0.80, "Consumer Staples": +0.50, "Healthcare": +0.45},
@@ -415,7 +420,7 @@ _MACRO_KNOWLEDGE_GRAPH: Dict[str, Dict[str, float]] = {
     "trade_war": {"Technology": -0.70, "Consumer Discretionary": -0.55, "Industrials": -0.60},
 }
 
-_MACRO_THEME_TRIGGERS: Dict[str, List[str]] = {
+_MACRO_THEME_TRIGGERS: dict[str, list[str]] = {
     "rate_hike": ["rate hike", "interest rate rise", "fed hike", "hawkish", "tightening"],
     "rate_cut": ["rate cut", "interest rate cut", "dovish", "easing", "lower rates"],
     "geopolitical_crisis": ["war", "conflict", "invasion", "military", "geopolitical", "sanctions"],
@@ -426,7 +431,7 @@ _MACRO_THEME_TRIGGERS: Dict[str, List[str]] = {
 }
 
 
-def classify_news_type(title: str) -> Dict:
+def classify_news_type(title: str) -> dict:
     t = title.lower()
     pos_hits = sum(1 for kw in _SURPRISE_POSITIVE if kw in t)
     neg_hits = sum(1 for kw in _SURPRISE_NEGATIVE if kw in t)
@@ -451,7 +456,7 @@ def classify_news_type(title: str) -> Dict:
     }
 
 
-def detect_macro_theme(title: str) -> Optional[str]:
+def detect_macro_theme(title: str) -> str | None:
     t = title.lower()
     best_theme = None
     best_score = 0
@@ -486,7 +491,7 @@ def compute_impact_score(
     beta: float = 1.0,
     market_regime: float = 1.2,
     macro_exposure: float = 0.0,
-) -> Dict:
+) -> dict:
     surprise_bonus = {
         "surprise_positive": +0.25,
         "surprise_negative": -0.25,
@@ -537,7 +542,7 @@ def impact_weighted_sentiment(news_df: pd.DataFrame, min_relevance: float = 0.08
     return float(np.clip(sign_avg * magnitude * 0.5, -1.0, 1.0))
 
 
-_SECTOR_KEYWORDS: Dict[str, List[str]] = {
+_SECTOR_KEYWORDS: dict[str, list[str]] = {
     "Technology": ["tech", "software", "hardware", "chip", "semiconductor", "ai", "cloud", "gpu"],
     "Financials": ["bank", "finance", "interest rate", "fed", "credit", "loan", "insurance"],
     "Healthcare": ["drug", "fda", "clinical trial", "biotech", "pharma", "vaccine", "medical"],
@@ -563,7 +568,7 @@ def compute_relevance(
     company_name: str = "",
     sector: str = "",
     beta: float = 1.0,
-) -> Dict:
+) -> dict:
     t = title.lower()
 
     ntype_info = classify_news_type(title)
@@ -677,7 +682,7 @@ def analyze_news_sentiment(
     max_news: int = 30,
     min_relevance: float = 0.08,
     beta: float = 1.0,
-) -> Tuple[pd.DataFrame, Dict]:
+) -> tuple[pd.DataFrame, dict]:
     """뉴스 수집 → 분류 → Impact Score → 가중 감성 점수"""
     _empty = {
         "avg_sentiment": 0.0,
@@ -703,8 +708,9 @@ def analyze_news_sentiment(
     if not news_list:
         return pd.DataFrame(), _empty
 
-    analyze_fn = analyze_sentiment_finbert if (use_finbert and _finbert_available()) else analyze_sentiment_vader
-    model_name = "FinBERT" if (use_finbert and _finbert_available()) else "VADER + Impact Framework"
+    use_fb = use_finbert and _finbert_available()
+    analyze_fn = analyze_sentiment_finbert if use_fb else analyze_sentiment_vader
+    model_name = "FinBERT" if use_fb else "VADER + Impact Framework"
 
     rows = []
     for item in news_list:

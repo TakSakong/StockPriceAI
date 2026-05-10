@@ -1,7 +1,7 @@
 """POST /api/v1/predict — 단일 종목 예측"""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -24,9 +24,9 @@ class PredictResponse(BaseModel):
     down_probability: float
     confidence: float
     model: str
-    ensemble_detail: Optional[Dict[str, Any]] = None
-    training_metrics: Dict[str, Any]
-    technical_summary: Dict[str, Any]
+    ensemble_detail: dict[str, Any] | None = None
+    training_metrics: dict[str, Any]
+    technical_summary: dict[str, Any]
 
 
 @router.post("", response_model=PredictResponse, summary="단일 종목 ML 예측")
@@ -39,10 +39,14 @@ async def predict(req: PredictRequest):
     - **confidence**: 신뢰도 (max(up, down) 확률)
     """
     try:
-        from ....services.fetcher import fetch_stock_data
-        from ....services.technical import add_all_indicators, get_current_signals, get_support_resistance
-        from ....services.sentiment import analyze_news_sentiment, add_sentiment_to_features
         from ....models.predictor import EnsemblePredictor
+        from ....services.fetcher import fetch_stock_data
+        from ....services.sentiment import add_sentiment_to_features, analyze_news_sentiment
+        from ....services.technical import (
+            add_all_indicators,
+            get_current_signals,
+            get_support_resistance,
+        )
 
         ticker = req.ticker.strip().upper()
 
@@ -61,7 +65,9 @@ async def predict(req: PredictRequest):
             df = add_sentiment_to_features(df, sent_summary["avg_sentiment"])
 
         predictor = EnsemblePredictor(scanner_mode=False)
-        train_metrics = predictor.train(df, include_sentiment=req.include_sentiment, force_lstm=req.force_lstm)
+        train_metrics = predictor.train(
+            df, include_sentiment=req.include_sentiment, force_lstm=req.force_lstm
+        )
 
         if "error" in train_metrics:
             raise HTTPException(status_code=422, detail=train_metrics["error"])
@@ -79,7 +85,9 @@ async def predict(req: PredictRequest):
             "latest": {
                 "rsi14": float(df["RSI14"].iloc[-1]) if "RSI14" in df else None,
                 "bb_position": float(df["BB_Position"].iloc[-1]) if "BB_Position" in df else None,
-                "volume_ratio": float(df["Volume_Ratio"].iloc[-1]) if "Volume_Ratio" in df else None,
+                "volume_ratio": (
+                    float(df["Volume_Ratio"].iloc[-1]) if "Volume_Ratio" in df else None
+                ),
                 "macd": float(df["MACD"].iloc[-1]) if "MACD" in df else None,
             },
         }

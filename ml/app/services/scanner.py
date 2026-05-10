@@ -12,7 +12,6 @@ import traceback
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -80,7 +79,7 @@ def _get_redis() -> redis.Redis:
     return redis.from_url(settings.redis_url, decode_responses=True)
 
 
-def load_cache(ticker: str) -> Optional[Dict]:
+def load_cache(ticker: str) -> dict | None:
     try:
         r = _get_redis()
         raw = r.get(f"{CACHE_KEY_PREFIX}{ticker}")
@@ -91,7 +90,7 @@ def load_cache(ticker: str) -> Optional[Dict]:
     return None
 
 
-def save_cache(ticker: str, data: Dict, ttl_hours: int = CACHE_TTL_H) -> None:
+def save_cache(ticker: str, data: dict, ttl_hours: int = CACHE_TTL_H) -> None:
     try:
         r = _get_redis()
         r.setex(
@@ -103,8 +102,8 @@ def save_cache(ticker: str, data: Dict, ttl_hours: int = CACHE_TTL_H) -> None:
         pass
 
 
-def load_all_cache(tickers: List[str]) -> Dict[str, Dict]:
-    cache: Dict[str, Dict] = {}
+def load_all_cache(tickers: list[str]) -> dict[str, dict]:
+    cache: dict[str, dict] = {}
     try:
         r = _get_redis()
         pipe = r.pipeline()
@@ -122,7 +121,7 @@ def load_all_cache(tickers: List[str]) -> Dict[str, Dict]:
     return cache
 
 
-def save_all_cache(updates: Dict[str, Dict], ttl_hours: int = CACHE_TTL_H) -> None:
+def save_all_cache(updates: dict[str, dict], ttl_hours: int = CACHE_TTL_H) -> None:
     try:
         r = _get_redis()
         pipe = r.pipeline()
@@ -138,7 +137,7 @@ def save_all_cache(updates: Dict[str, Dict], ttl_hours: int = CACHE_TTL_H) -> No
         pass
 
 
-def is_cache_valid(entry: Dict, ttl_hours: float = CACHE_TTL_H) -> bool:
+def is_cache_valid(entry: dict, ttl_hours: float = CACHE_TTL_H) -> bool:
     try:
         t = datetime.fromisoformat(entry["cached_at"])
         return datetime.now() - t < timedelta(hours=ttl_hours)
@@ -146,7 +145,7 @@ def is_cache_valid(entry: Dict, ttl_hours: float = CACHE_TTL_H) -> bool:
         return False
 
 
-def get_latest_close(ticker: str) -> Optional[float]:
+def get_latest_close(ticker: str) -> float | None:
     try:
         hist = yf.Ticker(ticker).history(period="2d")
         if not hist.empty:
@@ -156,7 +155,7 @@ def get_latest_close(ticker: str) -> Optional[float]:
     return None
 
 
-def price_changed(entry: Dict, threshold_pct: float = 2.0) -> bool:
+def price_changed(entry: dict, threshold_pct: float = 2.0) -> bool:
     cached_price = entry.get("current_price")
     if cached_price is None:
         return True
@@ -177,7 +176,7 @@ BLENDABLE = [
 ]
 
 
-def dp_blend(old: Dict, new: Dict, alpha: float = EWMA_ALPHA) -> Dict:
+def dp_blend(old: dict, new: dict, alpha: float = EWMA_ALPHA) -> dict:
     out = new.copy()
     for field in BLENDABLE:
         if field in old and field in new:
@@ -194,13 +193,13 @@ def dp_blend(old: Dict, new: Dict, alpha: float = EWMA_ALPHA) -> Dict:
 # 단일 종목 앙상블 분석
 # ─────────────────────────────────────────────────────────────
 
-def analyze_single_ticker(ticker: str, period_days: int = 400) -> Optional[Dict]:
+def analyze_single_ticker(ticker: str, period_days: int = 400) -> dict | None:
     """XGBoost + LSTM 전체 앙상블 분석."""
     t0 = time.time()
     try:
+        from ..models.predictor import EnsemblePredictor
         from .fetcher import fetch_stock_data
         from .technical import add_all_indicators, get_current_signals
-        from ..models.predictor import EnsemblePredictor
 
         df, info = fetch_stock_data(ticker, period_days=period_days)
         if df is None or len(df) < 60:
@@ -297,12 +296,12 @@ def analyze_single_ticker(ticker: str, period_days: int = 400) -> Optional[Dict]
 
 def _process_one(
     ticker: str,
-    old: Optional[Dict],
+    old: dict | None,
     force_refresh: bool,
     price_threshold_pct: float,
     period_days: int = 400,
     progress_callback=None,
-) -> Tuple[str, Optional[Dict], str]:
+) -> tuple[str, dict | None, str]:
     if old and old.get("period_days", 400) != period_days:
         force_refresh = True
 
@@ -330,7 +329,7 @@ class ScanProgress:
         self.refreshed = 0
         self.failed = 0
         self.current_ticker = ""
-        self.live_results: List[Dict] = []
+        self.live_results: list[dict] = []
         self.started_at = datetime.now()
 
     @property
@@ -342,13 +341,13 @@ class ScanProgress:
         return (datetime.now() - self.started_at).total_seconds()
 
     @property
-    def eta_sec(self) -> Optional[float]:
+    def eta_sec(self) -> float | None:
         if self.done == 0:
             return None
         rate = self.done / max(self.elapsed_sec, 0.001)
         return (self.total - self.done) / rate if rate > 0 else None
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "total": self.total,
             "done": self.done,
@@ -373,15 +372,15 @@ class ScanProgress:
 # ─────────────────────────────────────────────────────────────
 
 def run_sp500_scan(
-    tickers: List[str],
+    tickers: list[str],
     max_workers: int = 0,
     force_refresh: bool = False,
     price_threshold_pct: float = 2.0,
-    stop_flag: Optional[Dict] = None,
-    progress: Optional[ScanProgress] = None,
+    stop_flag: dict | None = None,
+    progress: ScanProgress | None = None,
     period_days: int = 400,
     progress_callback=None,
-) -> Tuple[pd.DataFrame, Dict]:
+) -> tuple[pd.DataFrame, dict]:
     """ThreadPoolExecutor 기반 배치 스캔 (Redis 캐시 사용)."""
     if max_workers <= 0:
         max_workers = PARALLEL["scanner_workers"]
@@ -401,7 +400,7 @@ def run_sp500_scan(
         f"캐시재사용={len(tickers)-need_analysis}, 신규분석={need_analysis}"
     )
 
-    pending_saves: Dict[str, Dict] = {}
+    pending_saves: dict[str, dict] = {}
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
@@ -481,7 +480,7 @@ def run_sp500_scan(
     return df, cache
 
 
-def get_cache_stats(tickers: List[str]) -> Dict:
+def get_cache_stats(tickers: list[str]) -> dict:
     cache = load_all_cache(tickers)
     valid = stale = 0
     for t in tickers:

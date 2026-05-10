@@ -7,7 +7,6 @@ Redis에 진행률 및 결과를 저장합니다.
 import json
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
 
 import redis
 
@@ -24,7 +23,7 @@ def _get_redis() -> redis.Redis:
     return redis.from_url(settings.redis_url, decode_responses=True)
 
 
-def _save_progress(job_id: str, data: Dict) -> None:
+def _save_progress(job_id: str, data: dict) -> None:
     try:
         r = _get_redis()
         r.setex(f"{PROGRESS_KEY_PREFIX}{job_id}", PROGRESS_TTL, json.dumps(data, default=str))
@@ -32,7 +31,7 @@ def _save_progress(job_id: str, data: Dict) -> None:
         pass
 
 
-def get_scan_progress(job_id: str) -> Optional[Dict]:
+def get_scan_progress(job_id: str) -> dict | None:
     try:
         r = _get_redis()
         raw = r.get(f"{PROGRESS_KEY_PREFIX}{job_id}")
@@ -47,11 +46,11 @@ def get_scan_progress(job_id: str) -> Optional[Dict]:
 def run_scan_job(
     self,
     job_id: str,
-    tickers: List[str],
+    tickers: list[str],
     max_workers: int = 2,
     force_refresh: bool = False,
     period_days: int = 400,
-) -> Dict:
+) -> dict:
     """
     S&P 500 배치 스캔 Celery 태스크.
 
@@ -83,7 +82,7 @@ def run_scan_job(
 
         progress = ScanProgress(total=len(tickers))
 
-        def on_progress(state: Dict) -> None:
+        def on_progress(state: dict) -> None:
             _save_progress(
                 job_id,
                 {

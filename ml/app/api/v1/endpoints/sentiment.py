@@ -1,7 +1,6 @@
 """GET /api/v1/sentiment/{ticker} — 감성 분석"""
 
 import logging
-from typing import Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -21,7 +20,7 @@ class NewsItem(BaseModel):
     relevance_tier: str
     news_type: str
     impact_score: float
-    macro_theme: Optional[str] = None
+    macro_theme: str | None = None
 
 
 class SentimentResponse(BaseModel):
@@ -38,10 +37,10 @@ class SentimentResponse(BaseModel):
     direct_news_count: int
     surprise_count: int
     structural_count: int
-    macro_themes: List[str]
+    macro_themes: list[str]
     model: str
-    sources: List[str]
-    news: List[NewsItem]
+    sources: list[str]
+    news: list[NewsItem]
 
 
 @router.get("/{ticker}", response_model=SentimentResponse, summary="뉴스 감성 분석")
@@ -81,7 +80,7 @@ async def get_sentiment(
             beta=beta,
         )
 
-        news_items: List[NewsItem] = []
+        news_items: list[NewsItem] = []
         if not news_df.empty:
             for _, row in news_df.head(max_news).iterrows():
                 news_items.append(

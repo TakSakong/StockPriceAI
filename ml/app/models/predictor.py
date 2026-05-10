@@ -14,7 +14,6 @@ from __future__ import annotations
 import logging
 import time
 import warnings
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -22,7 +21,13 @@ from sklearn.metrics import accuracy_score
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 
-from ..core.config import DATA, PARALLEL, PYTORCH, PYTORCH_SCANNER, XGBOOST, XGBOOST_SCANNER, get_torch_device
+from ..core.config import (
+    DATA,
+    PYTORCH,
+    PYTORCH_SCANNER,
+    XGBOOST,
+    XGBOOST_SCANNER,
+)
 
 warnings.filterwarnings("ignore")
 
@@ -58,25 +63,33 @@ BASE_FEATURES = [
 SENTIMENT_FEATURES = ["Sentiment_Score", "Sentiment_Positive", "Sentiment_Negative"]
 
 
-def get_feature_columns(df: pd.DataFrame, include_sentiment: bool = True) -> List[str]:
+def get_feature_columns(df: pd.DataFrame, include_sentiment: bool = True) -> list[str]:
     cols = [f for f in BASE_FEATURES if f in df.columns]
     if include_sentiment:
         cols += [f for f in SENTIMENT_FEATURES if f in df.columns]
     return cols
 
 
-def _auto_params(n_samples: int) -> Dict:
+def _auto_params(n_samples: int) -> dict:
     max_train = DATA["max_train_samples"]
     max_lstm = DATA["max_lstm_samples"]
 
     if n_samples < 300:
-        return {"n_estimators_xgb": 150, "n_splits": 3, "lstm_epochs": 60, "max_lstm_samples": max_lstm}
+        return {
+            "n_estimators_xgb": 150, "n_splits": 3, "lstm_epochs": 60, "max_lstm_samples": max_lstm
+        }
     elif n_samples < 800:
-        return {"n_estimators_xgb": 200, "n_splits": 4, "lstm_epochs": 80, "max_lstm_samples": max_lstm}
+        return {
+            "n_estimators_xgb": 200, "n_splits": 4, "lstm_epochs": 80, "max_lstm_samples": max_lstm
+        }
     elif n_samples < 2000:
-        return {"n_estimators_xgb": 300, "n_splits": 5, "lstm_epochs": 100, "max_lstm_samples": max_lstm}
+        return {
+            "n_estimators_xgb": 300, "n_splits": 5, "lstm_epochs": 100, "max_lstm_samples": max_lstm
+        }
     elif n_samples <= max_train:
-        return {"n_estimators_xgb": 300, "n_splits": 5, "lstm_epochs": 120, "max_lstm_samples": max_lstm}
+        return {
+            "n_estimators_xgb": 300, "n_splits": 5, "lstm_epochs": 120, "max_lstm_samples": max_lstm
+        }
     else:
         return {
             "n_estimators_xgb": 300,
@@ -90,10 +103,10 @@ def _auto_params(n_samples: int) -> Dict:
 
 def prepare_training_data(
     df: pd.DataFrame,
-    feature_cols: List[str],
+    feature_cols: list[str],
     min_samples: int = 60,
-    max_samples: Optional[int] = None,
-) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Optional[pd.DatetimeIndex]]:
+    max_samples: int | None = None,
+) -> tuple[np.ndarray | None, np.ndarray | None, pd.DatetimeIndex | None]:
     work = df[feature_cols + ["Target"]].copy()
     work = work.dropna(subset=["Target"]).iloc[:-1]
 
@@ -118,9 +131,9 @@ class RegimeDetector:
     def __init__(self, lookback: int = 60):
         self.lookback = lookback
 
-    def compute(self, df: pd.DataFrame) -> Dict:
+    def compute(self, df: pd.DataFrame) -> dict:
         recent = df.tail(self.lookback).copy()
-        scores: Dict[str, float] = {}
+        scores: dict[str, float] = {}
 
         if "ATR_Pct" in recent.columns:
             atr_series = recent["ATR_Pct"].dropna()
@@ -149,7 +162,9 @@ class RegimeDetector:
         if "RSI14" in recent.columns:
             rsi = recent["RSI14"].dropna()
             if len(rsi) > 5:
-                scores["rsi_extremes"] = float(np.clip(((rsi > 70) | (rsi < 30)).mean() * 2.5, 0, 1))
+                scores["rsi_extremes"] = float(
+                    np.clip(((rsi > 70) | (rsi < 30)).mean() * 2.5, 0, 1)
+                )
             else:
                 scores["rsi_extremes"] = 0.2
         else:
@@ -157,7 +172,9 @@ class RegimeDetector:
 
         if "MACD_Cross" in recent.columns:
             cross_count = recent["MACD_Cross"].abs().sum()
-            scores["macd_cross_freq"] = float(np.clip(cross_count / (self.lookback + 1e-9) * 15, 0, 1))
+            scores["macd_cross_freq"] = float(
+                np.clip(cross_count / (self.lookback + 1e-9) * 15, 0, 1)
+            )
         else:
             scores["macd_cross_freq"] = 0.2
 
@@ -214,13 +231,13 @@ class XGBoostPredictor:
         self.scanner_mode = scanner_mode
         self.model = None
         self.scaler = StandardScaler()
-        self.feature_cols: Optional[List[str]] = None
+        self.feature_cols: list[str] | None = None
         self.is_trained = False
-        self.feature_importances_: Optional[pd.Series] = None
-        self.training_metrics: Dict = {}
-        self._cv_proba: Optional[np.ndarray] = None
+        self.feature_importances_: pd.Series | None = None
+        self.training_metrics: dict = {}
+        self._cv_proba: np.ndarray | None = None
 
-    def train(self, df: pd.DataFrame, include_sentiment: bool = True, n_splits: int = 5) -> Dict:
+    def train(self, df: pd.DataFrame, include_sentiment: bool = True, n_splits: int = 5) -> dict:
         try:
             import xgboost as xgb
 
@@ -242,7 +259,9 @@ class XGBoostPredictor:
         if X is None:
             return {"error": "학습 데이터 부족 (최소 60일 필요)"}
 
-        log.info(f"XGBoost 학습: 데이터={raw_len}일, 피처={len(self.feature_cols)}개, CV={n_splits_}fold")
+        log.info(
+            f"XGBoost 학습: 데이터={raw_len}일, 피처={len(self.feature_cols)}개, CV={n_splits_}fold"
+        )
 
         t0 = time.time()
         tscv = TimeSeriesSplit(n_splits=n_splits_)
@@ -320,7 +339,7 @@ class XGBoostPredictor:
         }
         return self.training_metrics
 
-    def _train_sklearn(self, df: pd.DataFrame, include_sentiment: bool) -> Dict:
+    def _train_sklearn(self, df: pd.DataFrame, include_sentiment: bool) -> dict:
         from sklearn.ensemble import GradientBoostingClassifier
 
         log.warning("XGBoost 로드 실패 → GradientBoosting 폴백")
@@ -349,7 +368,7 @@ class XGBoostPredictor:
         }
         return self.training_metrics
 
-    def predict_proba(self, df: pd.DataFrame) -> Optional[float]:
+    def predict_proba(self, df: pd.DataFrame) -> float | None:
         if not self.is_trained or self.feature_cols is None:
             return None
         try:
@@ -360,7 +379,7 @@ class XGBoostPredictor:
         except Exception:
             return None
 
-    def predict(self, df: pd.DataFrame) -> Dict:
+    def predict(self, df: pd.DataFrame) -> dict:
         p = self.predict_proba(df)
         if p is None:
             return {"error": "예측 실패"}
@@ -379,13 +398,13 @@ class LSTMPredictor:
         self.scanner_mode = scanner_mode
         self.model = None
         self.scaler = StandardScaler()
-        self.feature_cols: Optional[List[str]] = None
+        self.feature_cols: list[str] | None = None
         self.is_trained = False
-        self.framework: Optional[str] = None
-        self.training_metrics: Dict = {}
+        self.framework: str | None = None
+        self.training_metrics: dict = {}
 
     @staticmethod
-    def available_framework() -> Optional[str]:
+    def available_framework() -> str | None:
         try:
             import torch as _t  # noqa: F401
 
@@ -400,7 +419,7 @@ class LSTMPredictor:
             pass
         return None
 
-    def train(self, df: pd.DataFrame, include_sentiment: bool = True) -> Dict:
+    def train(self, df: pd.DataFrame, include_sentiment: bool = True) -> dict:
         fw = self.available_framework()
         if not fw:
             return {"error": "PyTorch / TensorFlow 미설치"}
@@ -418,7 +437,7 @@ class LSTMPredictor:
             return self._train_pytorch(X_sc, y)
         return self._train_tensorflow(X_sc, y)
 
-    def _train_pytorch(self, X_sc: np.ndarray, y: np.ndarray) -> Dict:
+    def _train_pytorch(self, X_sc: np.ndarray, y: np.ndarray) -> dict:
         import torch
         import torch.nn as nn
 
@@ -465,7 +484,10 @@ class LSTMPredictor:
         max_epochs = _auto_params(len(X_seq))["lstm_epochs"]
         patience = max(10, max_epochs // 10)
 
-        log.info(f"LSTM (PyTorch/CPU) 학습: SEQ={SEQ}, 피처={n_feat}, 샘플={len(X_seq)}, 최대에포크={max_epochs}")
+        log.info(
+            "LSTM (PyTorch/CPU) 학습: SEQ=%d, 피처=%d, 샘플=%d, 최대에포크=%d",
+            SEQ, n_feat, len(X_seq), max_epochs,
+        )
 
         t0 = time.time()
         best_val, best_state, wait = 0.0, None, 0
@@ -509,8 +531,7 @@ class LSTMPredictor:
         }
         return self.training_metrics
 
-    def _train_tensorflow(self, X_sc: np.ndarray, y: np.ndarray) -> Dict:
-        import tensorflow as tf
+    def _train_tensorflow(self, X_sc: np.ndarray, y: np.ndarray) -> dict:
 
         try:
             from tensorflow import keras
@@ -531,7 +552,9 @@ class LSTMPredictor:
         x = keras.layers.Dense(16, activation="relu")(x)
         out = keras.layers.Dense(1, activation="sigmoid")(x)
         model = keras.Model(inp, out)
-        model.compile(optimizer=keras.optimizers.Adam(0.001), loss="binary_crossentropy", metrics=["accuracy"])
+        model.compile(
+            optimizer=keras.optimizers.Adam(0.001), loss="binary_crossentropy", metrics=["accuracy"]
+        )
 
         n_ep = _auto_params(len(X_seq))["lstm_epochs"]
         cb_es = keras.callbacks.EarlyStopping(
@@ -559,7 +582,7 @@ class LSTMPredictor:
         }
         return self.training_metrics
 
-    def predict_proba(self, df: pd.DataFrame) -> Optional[float]:
+    def predict_proba(self, df: pd.DataFrame) -> float | None:
         if not self.is_trained or self.feature_cols is None:
             return None
         try:
@@ -585,7 +608,7 @@ class LSTMPredictor:
         except Exception:
             return None
 
-    def predict(self, df: pd.DataFrame) -> Dict:
+    def predict(self, df: pd.DataFrame) -> dict:
         p = self.predict_proba(df)
         if p is None:
             return {"error": "LSTM 예측 실패"}
@@ -619,10 +642,10 @@ class EnsemblePredictor:
 
         self.is_trained = False
         self.lstm_trained = False
-        self.training_metrics: Dict = {}
-        self.feature_importances_: Optional[pd.Series] = None
+        self.training_metrics: dict = {}
+        self.feature_importances_: pd.Series | None = None
 
-    def _compute_weights(self, complexity: float) -> Tuple[float, float]:
+    def _compute_weights(self, complexity: float) -> tuple[float, float]:
         if not self.lstm_trained:
             return 1.0, 0.0
 
@@ -646,7 +669,7 @@ class EnsemblePredictor:
         df: pd.DataFrame,
         include_sentiment: bool = True,
         force_lstm: bool = False,
-    ) -> Dict:
+    ) -> dict:
         ap_ens = _auto_params(len(df))
         t_total = time.time()
 
@@ -663,7 +686,7 @@ class EnsemblePredictor:
         use_lstm = force_lstm or regime_info["use_lstm"]
 
         # Step 3: LSTM (조건부)
-        lstm_metrics: Dict = {}
+        lstm_metrics: dict = {}
         lstm_fw = LSTMPredictor.available_framework()
         max_lstm = ap_ens.get("max_lstm_samples", DATA["max_lstm_samples"])
         lstm_df = df.iloc[-max_lstm:] if len(df) > max_lstm else df
@@ -709,7 +732,7 @@ class EnsemblePredictor:
             return "XGBoost (단독)"
         return f"Ensemble (XGB {int(round(w_xgb*100))}% + LSTM {int(round(w_lstm*100))}%)"
 
-    def predict(self, df: pd.DataFrame) -> Dict:
+    def predict(self, df: pd.DataFrame) -> dict:
         if not self.is_trained:
             return {"error": "모델 미학습"}
 
@@ -717,7 +740,7 @@ class EnsemblePredictor:
         if p_xgb is None:
             return {"error": "XGBoost 예측 실패"}
 
-        p_lstm: Optional[float] = None
+        p_lstm: float | None = None
         if self.lstm_trained:
             p_lstm = self.lstm.predict_proba(df)
 
@@ -750,7 +773,7 @@ class EnsemblePredictor:
 # 공통 유틸
 # ─────────────────────────────────────────────────────────────
 
-def _build_result(up_prob: float, model_name: str) -> Dict:
+def _build_result(up_prob: float, model_name: str) -> dict:
     down_prob = 1.0 - up_prob
     confidence = max(up_prob, down_prob)
     if up_prob > 0.58:

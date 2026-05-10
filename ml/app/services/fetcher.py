@@ -6,9 +6,7 @@ Multi-source Data Ingestion Module
 
 import warnings
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 import yfinance as yf
 
@@ -36,7 +34,7 @@ def normalize_ticker(ticker: str) -> str:
 def fetch_stock_data(
     ticker: str,
     period_days: int = 365,
-) -> Tuple[Optional[pd.DataFrame], Optional[Dict]]:
+) -> tuple[pd.DataFrame | None, dict | None]:
     """
     주가 데이터 및 재무정보 수집
 
@@ -68,7 +66,7 @@ def fetch_stock_data(
             hist[col] = hist[col].astype("float32")
         hist["Volume"] = hist["Volume"].astype("float32")
 
-        info: Dict = {}
+        info: dict = {}
         try:
             raw_info = stock.info
             financial_keys = [
@@ -114,7 +112,7 @@ def fetch_stock_data(
         raise ValueError(f"데이터 수집 실패 ({ticker}): {str(e)}")
 
 
-def fetch_earnings_history(ticker: str) -> Optional[pd.DataFrame]:
+def fetch_earnings_history(ticker: str) -> pd.DataFrame | None:
     """분기별 실적 데이터 수집"""
     ticker = normalize_ticker(ticker)
     try:
@@ -150,7 +148,7 @@ def fetch_earnings_history(ticker: str) -> Optional[pd.DataFrame]:
     return None
 
 
-def fetch_institutional_holders(ticker: str) -> Optional[pd.DataFrame]:
+def fetch_institutional_holders(ticker: str) -> pd.DataFrame | None:
     """기관 투자자 보유 현황"""
     ticker = normalize_ticker(ticker)
     try:
@@ -163,9 +161,9 @@ def fetch_institutional_holders(ticker: str) -> Optional[pd.DataFrame]:
     return None
 
 
-def get_market_context(ticker: str) -> Dict:
+def get_market_context(ticker: str) -> dict:
     """시장 맥락 데이터 (벤치마크 대비 성과)"""
-    context: Dict = {}
+    context: dict = {}
 
     norm_ticker = normalize_ticker(ticker)
     if ".KS" in norm_ticker or ".KQ" in norm_ticker:
