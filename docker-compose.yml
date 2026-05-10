@@ -20,7 +20,9 @@ services:
     volumes:
       - ./frontend/src:/app/src
     environment:
-      - NEXT_PUBLIC_API_URL=http://localhost/api
+      - NEXT_PUBLIC_API_URL=http://localhost
+      - NEXT_PUBLIC_ML_URL=http://localhost/ml
+      - NEXT_PUBLIC_WS_URL=ws://localhost
     restart: unless-stopped
 
   backend:
