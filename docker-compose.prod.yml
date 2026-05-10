@@ -1,0 +1,42 @@
+version: "3.9"
+
+# 프로덕션 오버라이드: docker-compose.yml 위에 병합해서 사용
+# 실행: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      target: production
+    volumes: []   # 프로덕션에서 소스 마운트 제거
+
+  backend:
+    build:
+      context: ./backend
+      target: production
+    volumes: []
+    environment:
+      - DATABASE_URL=${RDS_URL}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY}
+      - ML_SERVICE_URL=http://ml:8001
+    ports: []     # 외부 직접 노출 제거 (Nginx 경유)
+
+  ml:
+    build:
+      context: ./ml
+      target: production
+    volumes: []
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/2
+    ports: []
+
+  celery_worker:
+    build:
+      context: ./ml
+      target: production
+    volumes: []
+
+  postgres:
+    profiles: ["local"]   # 프로덕션에서는 RDS를 사용하므로 비활성화
