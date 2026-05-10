@@ -1,0 +1,103 @@
+version: "3.9"
+
+services:
+  nginx:
+    build: ./infra/nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - backend
+      - ml
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      target: development
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend/src:/app/src
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost/api
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      target: development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/app:/app/app
+    environment:
+      - DATABASE_URL=postgresql://stockai:stockai@postgres:5432/stockai
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-change-me}
+      - ML_SERVICE_URL=http://ml:8001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  ml:
+    build:
+      context: ./ml
+      target: development
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./ml/app:/app/app
+    environment:
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=redis://redis:6379/2
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  celery_worker:
+    build:
+      context: ./ml
+      target: development
+    command: celery -A app.workers.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - ./ml/app:/app/app
+    environment:
+      - CELERY_BROKER_URL=redis://redis:6379/2
+      - REDIS_URL=redis://redis:6379/1
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=stockai
+      - POSTGRES_PASSWORD=stockai
+      - POSTGRES_DB=stockai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockai -d stockai"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
