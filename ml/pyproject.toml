@@ -24,7 +24,7 @@ pytz = "^2024.1"
 # ML
 scikit-learn = ">=1.4.0,<2.0.0"
 xgboost = "^2.0.3"
-torch = { version = "^2.3.0", source = "pypi" }
+torch = { version = "^2.3.0", source = "pytorch-cpu" }
 
 # NLP
 vaderSentiment = "^3.3.2"
@@ -59,3 +59,8 @@ asyncio_mode = "auto"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"
