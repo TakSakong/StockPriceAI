@@ -57,8 +57,8 @@ async def get_sentiment(
     - **signal**: BULLISH / NEUTRAL / BEARISH
     """
     try:
-        from ....pipelines.fetcher import fetch_stock_data
         from ....models.sentiment import analyze_news_sentiment
+        from ....pipelines.fetcher import fetch_stock_data
 
         ticker = ticker.strip().upper()
 

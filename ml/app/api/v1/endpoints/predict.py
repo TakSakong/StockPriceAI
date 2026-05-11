@@ -40,8 +40,8 @@ async def predict(req: PredictRequest):
     """
     try:
         from ....models.predictor import EnsemblePredictor
-        from ....pipelines.fetcher import fetch_stock_data
         from ....models.sentiment import add_sentiment_to_features, analyze_news_sentiment
+        from ....pipelines.fetcher import fetch_stock_data
         from ....pipelines.technical import (
             add_all_indicators,
             get_current_signals,
