@@ -6,8 +6,6 @@ authors = ["StockPriceAI Team"]
 readme = "README.md"
 packages = [{ include = "app" }]
 
-[tool.poetry.requires-plugins]
-poetry-plugin-shell = ">=1.0"
 
 [tool.poetry.dependencies]
 python = "^3.11"
