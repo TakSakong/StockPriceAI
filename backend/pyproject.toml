@@ -3,7 +3,6 @@ name = "stockai-backend"
 version = "0.1.0"
 description = "StockPriceAI Backend API — FastAPI + PostgreSQL"
 authors = ["StockPriceAI Team"]
-package-mode = false
 readme = "README.md"
 packages = [{ include = "app" }]
 
