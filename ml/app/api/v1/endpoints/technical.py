@@ -38,8 +38,8 @@ async def get_technical(
     - 지지/저항 레벨
     """
     try:
-        from ....services.fetcher import fetch_stock_data
-        from ....services.technical import (
+        from ....pipelines.fetcher import fetch_stock_data
+        from ....pipelines.technical import (
             add_all_indicators,
             get_current_signals,
             get_support_resistance,

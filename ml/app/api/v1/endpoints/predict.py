@@ -40,9 +40,9 @@ async def predict(req: PredictRequest):
     """
     try:
         from ....models.predictor import EnsemblePredictor
-        from ....services.fetcher import fetch_stock_data
-        from ....services.sentiment import add_sentiment_to_features, analyze_news_sentiment
-        from ....services.technical import (
+        from ....pipelines.fetcher import fetch_stock_data
+        from ....models.sentiment import add_sentiment_to_features, analyze_news_sentiment
+        from ....pipelines.technical import (
             add_all_indicators,
             get_current_signals,
             get_support_resistance,

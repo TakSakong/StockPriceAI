@@ -12,7 +12,7 @@ import uuid
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from ....services.scanner import SP500_TICKERS, get_cache_stats
+from ....pipelines.scanner import SP500_TICKERS, get_cache_stats
 from ....workers.scan_tasks import get_scan_progress, run_scan_job
 
 router = APIRouter()
