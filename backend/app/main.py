@@ -5,11 +5,14 @@ from fastapi.openapi.utils import get_openapi
 from app.api.v1.router import api_router, ws_router
 from app.core.config import settings
 
+import os
+
 app = FastAPI(
     title="StockPriceAI Backend",
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    root_path=os.getenv("PROXY_ROOT_PATH", ""),
 )
 
 app.add_middleware(
