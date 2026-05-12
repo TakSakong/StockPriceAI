@@ -11,7 +11,19 @@ router = APIRouter(prefix="/stocks", tags=["Stocks"])
 async def get_stock(
     ticker: str,
 ) -> StockInfo:
-    """ML 서비스에서 종목 기본 정보를 조회합니다."""
+    """ML 서비스를 통해 특정 종목의 실시간 기본 정보 및 기술적 지표를 조회합니다.
+
+    Args:
+        ticker (str): 조회할 종목 코드 (예: AAPL).
+
+    Returns:
+        StockInfo: 종목명, 현재가, 시가총액, 기술적 지표 등을 포함한 상세 정보.
+
+    Raises:
+        HTTPException: 
+            - ML 서비스에서 데이터를 찾을 수 없는 경우 (404)
+            - ML 서비스가 응답하지 않는 경우 (503)
+    """
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             resp = await client.get(f"{settings.ML_SERVICE_URL}/api/v1/technical/{ticker.upper()}")
