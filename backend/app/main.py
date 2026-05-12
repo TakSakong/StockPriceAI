@@ -1,11 +1,11 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from app.api.v1.router import api_router, ws_router
 from app.core.config import settings
-
-import os
 
 app = FastAPI(
     title="StockPriceAI Backend",
