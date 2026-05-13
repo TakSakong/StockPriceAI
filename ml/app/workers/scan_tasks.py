@@ -78,7 +78,7 @@ def run_scan_job(
     )
 
     try:
-        from ..services.scanner import ScanProgress, run_sp500_scan
+        from ..pipelines.scanner import ScanProgress, run_sp500_scan
 
         progress = ScanProgress(total=len(tickers))
 
