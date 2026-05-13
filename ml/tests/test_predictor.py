@@ -52,7 +52,7 @@ def make_volatile_history(length: int = 80) -> pd.DataFrame:
 
 
 def test_get_feature_columns_includes_sentiment_only_when_present():
-    from app.predictor import get_feature_columns
+    from app.models.predictor import get_feature_columns
 
     df = pd.DataFrame({"RSI14": [50.0], "Sentiment_Score": [0.2]})
     columns = get_feature_columns(df, include_sentiment=True)
@@ -65,7 +65,7 @@ def test_get_feature_columns_includes_sentiment_only_when_present():
 
 
 def test_prepare_training_data_returns_arrays_for_valid_history():
-    from app.predictor import prepare_training_data
+    from app.models.predictor import prepare_training_data
 
     df = make_sample_history(80)
     feature_cols = ["RSI14", "MA5_vs_MA20", "MA20_vs_MA50", "ATR_Pct"]
@@ -81,7 +81,7 @@ def test_prepare_training_data_returns_arrays_for_valid_history():
 
 
 def test_prepare_training_data_handles_nan_and_inf_values():
-    from app.predictor import prepare_training_data
+    from app.models.predictor import prepare_training_data
 
     df = make_sample_history(80)
     df.loc[5, "RSI14"] = np.nan
@@ -96,7 +96,7 @@ def test_prepare_training_data_handles_nan_and_inf_values():
 
 
 def test_prepare_training_data_returns_none_for_short_history():
-    from app.predictor import prepare_training_data
+    from app.models.predictor import prepare_training_data
 
     df = make_sample_history(10)
     feature_cols = ["RSI14", "MA5_vs_MA20", "MA20_vs_MA50", "ATR_Pct"]
@@ -108,7 +108,7 @@ def test_prepare_training_data_returns_none_for_short_history():
 
 
 def test_regime_detector_returns_regime_and_use_lstm_flags():
-    from app.predictor import RegimeDetector
+    from app.models.predictor import RegimeDetector
 
     simple_df = make_sample_history(80)
     detector = RegimeDetector(lookback=40)
@@ -126,7 +126,7 @@ def test_regime_detector_returns_regime_and_use_lstm_flags():
 
 
 def test_build_result_produces_expected_signal_mapping():
-    from app.predictor import _build_result
+    from app.models.predictor import _build_result
 
     buy = _build_result(0.62, "XGBoost")
     assert buy["signal"] == "BUY"
@@ -144,7 +144,7 @@ def test_build_result_produces_expected_signal_mapping():
 
 
 def test_run_backtest_returns_portfolio_for_dummy_predictor():
-    from app.predictor import run_backtest
+    from app.models.predictor import run_backtest
 
     df = make_sample_history(85)
     df.index = pd.date_range("2025-01-01", periods=len(df), freq="D")
