@@ -26,10 +26,18 @@ async def get_stock(
     """
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
+            # ml service 호출해서 ticker 정보를 받는다.
             resp = await client.get(f"{settings.ML_SERVICE_URL}/api/v1/technical/{ticker.upper()}")
             resp.raise_for_status()
             data = resp.json()
         except httpx.HTTPStatusError as e:
+            # ML 서비스가 데이터를 찾지 못하는 경우(404) 기본 정보라도 반환하여 프론트엔드 오류 방지
+            if e.response.status_code == 404:
+                return StockInfo(
+                    ticker=ticker.upper(),
+                    name=ticker.upper(),
+                    current_price=None
+                )
             raise HTTPException(
                 status_code=e.response.status_code,
                 detail=f"ML service error: {e.response.text}",
@@ -40,4 +48,10 @@ async def get_stock(
                 detail="ML service unavailable",
             )
 
-    return StockInfo(ticker=ticker.upper(), **data.get("info", {}))
+    indicators = data.get("latest_indicators", {})
+    # ML 서비스가 현재 info 필드를 제공하지 않으므로, 최신 지표 데이터를 바탕으로 StockInfo 생성
+    return StockInfo(
+        ticker=ticker.upper(),
+        name=ticker.upper(), # 종목명을 알 수 없으므로 우선 티커로 대체
+        current_price=indicators.get("close"),
+    )
