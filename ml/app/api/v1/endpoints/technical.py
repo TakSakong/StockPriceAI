@@ -24,6 +24,7 @@ class TechnicalResponse(BaseModel):
     latest_indicators: dict[str, float | None]
     ma_trend: str
     overall_signal: str
+    info: dict[str, any] = {}
 
 
 @router.get("/{ticker}", response_model=TechnicalResponse, summary="기술적 지표 조회")
@@ -46,7 +47,7 @@ async def get_technical(
         )
 
         ticker = ticker.strip().upper()
-        df, _ = fetch_stock_data(ticker, period_days=period_days)
+        df, info = fetch_stock_data(ticker, period_days=period_days)
         if df is None:
             raise HTTPException(status_code=404, detail=f"데이터 없음: {ticker}")
 
@@ -121,6 +122,7 @@ async def get_technical(
             },
             ma_trend=ma_trend,
             overall_signal=overall,
+            info=info or {},
         )
 
     except HTTPException:

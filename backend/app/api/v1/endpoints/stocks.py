@@ -49,9 +49,15 @@ async def get_stock(
             )
 
     indicators = data.get("latest_indicators", {})
+    info = data.get("info", {})
+    
     # ML 서비스가 현재 info 필드를 제공하지 않으므로, 최신 지표 데이터를 바탕으로 StockInfo 생성
     return StockInfo(
         ticker=ticker.upper(),
-        name=ticker.upper(), # 종목명을 알 수 없으므로 우선 티커로 대체
+        name=info.get("longName") or info.get("shortName") or ticker.upper(),
+        sector=info.get("sector"),
+        industry=info.get("industry"),
+        market_cap=info.get("marketCap"),
         current_price=indicators.get("close"),
+        currency=info.get("currency"),
     )
