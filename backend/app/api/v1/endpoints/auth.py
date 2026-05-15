@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, UserOut
 from app.services.auth import get_current_user, login_user, refresh_tokens, register_user
 
@@ -64,7 +65,7 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResp
 
 
 @router.get("/me", response_model=UserOut, summary="현재 로그인 사용자 조회")
-def me(current_user=Depends(get_current_user)) -> UserOut:
+def me(current_user: User = Depends(get_current_user)) -> UserOut:
     """현재 로그인한 사용자의 정보를 조회합니다.
     요청 헤더의 Bearer 토큰을 통해 사용자를 식별하고 정보를 반환합니다.
 

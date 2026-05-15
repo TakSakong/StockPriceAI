@@ -15,6 +15,7 @@ import re
 import warnings
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
@@ -154,7 +155,7 @@ def _fetch_google_news_rss(
     ticker: str, company_name: str = "", max_news: int = 15
 ) -> list[dict]:
     query = company_name if company_name else ticker
-    query_enc = requests.utils.quote(f"{query} stock")
+    query_enc = quote(f"{query} stock")
     url = f"https://news.google.com/rss/search?q={query_enc}&hl=en-US&gl=US&ceid=US:en"
     news_list = []
     try:
@@ -168,7 +169,7 @@ def _fetch_google_news_rss(
                 pub_str = (item.findtext("pubDate") or "").strip()
                 link = (item.findtext("link") or "").strip()
                 source_el = item.find("source")
-                publisher = source_el.text.strip() if source_el is not None else "Google News"
+                publisher = (source_el.text or "").strip() if source_el is not None else "Google News"
                 if not title:
                     continue
                 if " - " in title:
@@ -209,7 +210,7 @@ def fetch_news(ticker: str, company_name: str = "", max_news: int = 30) -> list[
         if len(all_news) >= max_news:
             break
         try:
-            batch = source_fn(*args)
+            batch = source_fn(*args)  # type: ignore[operator]
             for item in batch:
                 norm = re.sub(r"\s+", " ", item["title"].lower().strip())
                 key = norm[:60]

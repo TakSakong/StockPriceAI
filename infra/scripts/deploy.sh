@@ -15,6 +15,6 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml \
 echo "[deploy] Waiting for health checks..."
 sleep 10
 curl -sf http://localhost/api/health && echo " backend OK"
-curl -sf http://localhost:8001/health && echo " ml OK"
+curl -sf http://localhost/ml/health && echo " ml OK"
 
 echo "[deploy] Done."

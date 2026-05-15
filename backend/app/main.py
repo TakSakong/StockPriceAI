@@ -1,4 +1,5 @@
 import os
+from typing import Any
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,9 +33,9 @@ async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def custom_openapi() -> dict:
+def custom_openapi() -> dict[str, Any]:
     if app.openapi_schema:
-        return app.openapi_schema  # type: ignore[return-value]
+        return app.openapi_schema
 
     schema = get_openapi(
         title=app.title,

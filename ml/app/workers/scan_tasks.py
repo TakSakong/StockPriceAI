@@ -7,6 +7,7 @@ Redis에 진행률 및 결과를 저장합니다.
 import json
 import logging
 from datetime import datetime
+from typing import cast
 
 import redis
 
@@ -34,7 +35,7 @@ def _save_progress(job_id: str, data: dict) -> None:
 def get_scan_progress(job_id: str) -> dict | None:
     try:
         r = _get_redis()
-        raw = r.get(f"{PROGRESS_KEY_PREFIX}{job_id}")
+        raw = cast("str | None", r.get(f"{PROGRESS_KEY_PREFIX}{job_id}"))
         if raw:
             return json.loads(raw)
     except Exception:

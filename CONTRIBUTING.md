@@ -58,7 +58,7 @@ docs(ci): update GitHub Actions setup guide
 
 ```bash
 # 1. 저장소 클론
-git clone https://github.com/your-org/StockPriceAI.git
+git clone https://github.com/TakSakong/StockPriceAI.git
 cd StockPriceAI
 
 # 2. 환경 변수 설정 (SECRET_KEY만 임의 값으로 교체)
