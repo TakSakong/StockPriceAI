@@ -124,7 +124,14 @@ async def get_technical(
             },
             ma_trend=ma_trend,
             overall_signal=overall,
-            info=info or {},
+            info={
+                "sector": info.get("sector") if info else None,
+                "industry": info.get("industry") if info else None,
+                "marketCap": info.get("marketCap") if info else None,
+                "longName": info.get("longName") if info else None,
+                "shortName": info.get("shortName") if info else None,
+                "currency": info.get("currency") if info else None,
+            },
         )
 
     except HTTPException:
