@@ -2,6 +2,8 @@
 
 import logging
 
+from typing import Any
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
@@ -24,7 +26,7 @@ class TechnicalResponse(BaseModel):
     latest_indicators: dict[str, float | None]
     ma_trend: str
     overall_signal: str
-    info: dict[str, any] = {}
+    info: dict[str, Any] = {}
 
 
 @router.get("/{ticker}", response_model=TechnicalResponse, summary="기술적 지표 조회")
