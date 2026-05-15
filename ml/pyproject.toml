@@ -2,7 +2,8 @@
 name = "stockai-ml"
 version = "0.1.0"
 description = "StockPriceAI ML Service — FastAPI + Celery + ML Models"
-authors = ["StockPriceAI Team"]
+license = "MIT"
+authors = ["StockPriceAI Team <openmoresome@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "app" }]
 
