@@ -6,10 +6,15 @@ on:
   push:
     branches: [develop]
 
+# 같은 브랜치/PR에서 새 커밋이 오면 이전 실행을 취소
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── Backend ────────────────────────────────────────────────
   backend:
-    name: Backend (ruff + pytest)
+    name: Backend (ruff + mypy + pytest)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -38,10 +43,10 @@ jobs:
         run: poetry run ruff check app
 
       - name: Type check (mypy)
-        run: poetry run mypy app || true   # 초기 단계에서는 경고만
+        run: poetry run mypy app
 
       - name: Test (pytest)
-        run: poetry run pytest tests/ -v --tb=short || true
+        run: poetry run pytest tests/ -v --tb=short
 
   # ── ML Service ─────────────────────────────────────────────
   ml:
@@ -74,7 +79,7 @@ jobs:
         run: poetry run ruff check app
 
       - name: Test (pytest)
-        run: poetry run pytest tests/ -v --tb=short || true
+        run: poetry run pytest tests/ -v --tb=short
 
   # ── Frontend ───────────────────────────────────────────────
   frontend:
@@ -97,10 +102,10 @@ jobs:
         run: npm ci
 
       - name: Type check
-        run: npm run type-check || true
+        run: npm run type-check
 
       - name: Lint
-        run: npm run lint || true
+        run: npm run lint
 
       - name: Build
-        run: npm run build || true
+        run: npm run build
