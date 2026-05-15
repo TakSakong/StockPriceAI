@@ -795,7 +795,7 @@ def _build_result(up_prob: float, model_name: str) -> dict:
 
 def run_backtest(
     df: pd.DataFrame,
-    predictor: any,
+    predictor: Any,
     initial_capital: float = 10000,
     commission_rate: float = 0.001,
 ) -> dict:
