@@ -1,7 +1,6 @@
 """GET /api/v1/technical/{ticker} — 기술적 지표"""
 
 import logging
-
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query

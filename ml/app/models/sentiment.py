@@ -169,7 +169,9 @@ def _fetch_google_news_rss(
                 pub_str = (item.findtext("pubDate") or "").strip()
                 link = (item.findtext("link") or "").strip()
                 source_el = item.find("source")
-                publisher = (source_el.text or "").strip() if source_el is not None else "Google News"
+                publisher = (
+                    (source_el.text or "").strip() if source_el is not None else "Google News"
+                )
                 if not title:
                     continue
                 if " - " in title:
