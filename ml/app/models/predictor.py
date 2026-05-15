@@ -118,7 +118,7 @@ def prepare_training_data(
 
     X = work[feature_cols].ffill().bfill().fillna(0)
     X = X.replace([np.inf, -np.inf], 0).clip(-10, 10)
-    return X.values, work["Target"].values.astype(int), work.index
+    return X.values.astype(np.float32), work["Target"].values.astype(int), work.index
 
 
 # ─────────────────────────────────────────────────────────────
@@ -789,4 +789,62 @@ def _build_result(up_prob: float, model_name: str) -> dict:
         "confidence": round(confidence, 4),
         "signal": signal,
         "model": model_name,
+    }
+
+
+def run_backtest(
+    df: pd.DataFrame,
+    predictor: any,
+    initial_capital: float = 10000,
+    commission_rate: float = 0.001,
+) -> dict:
+    """Walk-forward 백테스트."""
+    if not predictor.is_trained:
+        return {}
+
+    close = df["Close"]
+    capital = initial_capital
+    shares = 0
+    position = "NONE"
+    trades = []
+    portfolio_values = []
+    min_train = 60
+
+    for i in range(min_train, len(df)):
+        current_df = df.iloc[: i + 1]
+        pred = predictor.predict(current_df)
+
+        if "error" in pred:
+            portfolio_values.append(
+                capital + (shares * float(close.iloc[i]) if position == "LONG" else 0)
+            )
+            continue
+
+        sig = pred["signal"]
+        price = float(close.iloc[i])
+
+        if sig == "BUY" and position == "NONE":
+            shares = int(capital * (1 - commission_rate) / price)
+            if shares > 0:
+                capital -= shares * price * (1 + commission_rate)
+                position = "LONG"
+                trades.append({"type": "BUY", "price": price, "shares": shares})
+
+        elif sig == "SELL" and position == "LONG":
+            capital += shares * price * (1 - commission_rate)
+            position = "NONE"
+            trades.append({"type": "SELL", "price": price, "shares": shares})
+            shares = 0
+
+        portfolio_values.append(capital + (shares * price if position == "LONG" else 0))
+
+    if position == "LONG" and shares > 0:
+        capital += shares * float(close.iloc[-1]) * (1 - commission_rate)
+
+    return {
+        "initial_capital": initial_capital,
+        "final_capital": round(capital, 2),
+        "strategy_return_pct": round((capital / initial_capital - 1) * 100, 2),
+        "n_trades": len(trades),
+        "portfolio_values": portfolio_values,
     }
