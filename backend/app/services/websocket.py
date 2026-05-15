@@ -1,4 +1,5 @@
 from collections import defaultdict
+from typing import Any
 
 from fastapi import WebSocket
 
@@ -18,7 +19,7 @@ class ConnectionManager:
         if ws in connections:
             connections.remove(ws)
 
-    async def broadcast(self, scan_id: str, message: dict) -> None:
+    async def broadcast(self, scan_id: str, message: dict[str, Any]) -> None:
         dead: list[WebSocket] = []
         for ws in self._connections.get(scan_id, []):
             try:
