@@ -50,7 +50,7 @@ jobs:
 
   # ── ML Service ─────────────────────────────────────────────
   ml:
-    name: ML Service (ruff + pytest)
+    name: ML Service (ruff + mypy + pytest)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -77,6 +77,9 @@ jobs:
 
       - name: Lint (ruff)
         run: poetry run ruff check app
+
+      - name: Type check (mypy)
+        run: poetry run mypy app
 
       - name: Test (pytest)
         run: poetry run pytest tests/ -v --tb=short
@@ -109,3 +112,20 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # ── Docker build smoke test ────────────────────────────────
+  docker:
+    name: Docker builds (production targets)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build --target production -t backend-prod ./backend
+
+      - name: Build ml image
+        run: docker build --target production -t ml-prod ./ml
+
+      - name: Build frontend image
+        run: docker build --target production -t frontend-prod ./frontend

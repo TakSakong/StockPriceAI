@@ -12,6 +12,7 @@ import traceback
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -82,7 +83,7 @@ def _get_redis() -> redis.Redis:
 def load_cache(ticker: str) -> dict | None:
     try:
         r = _get_redis()
-        raw = r.get(f"{CACHE_KEY_PREFIX}{ticker}")
+        raw = cast("str | None", r.get(f"{CACHE_KEY_PREFIX}{ticker}"))
         if raw:
             return json.loads(raw)
     except Exception:
@@ -202,7 +203,7 @@ def analyze_single_ticker(ticker: str, period_days: int = 400) -> dict | None:
         from .technical import add_all_indicators, get_current_signals
 
         df, info = fetch_stock_data(ticker, period_days=period_days)
-        if df is None or len(df) < 60:
+        if df is None or info is None or len(df) < 60:
             return None
 
         df = add_all_indicators(df)
