@@ -14,6 +14,7 @@ from __future__ import annotations
 import logging
 import time
 import warnings
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -229,7 +230,7 @@ class RegimeDetector:
 class XGBoostPredictor:
     def __init__(self, scanner_mode: bool = False):
         self.scanner_mode = scanner_mode
-        self.model = None
+        self.model: Any = None
         self.scaler = StandardScaler()
         self.feature_cols: list[str] | None = None
         self.is_trained = False
@@ -256,7 +257,7 @@ class XGBoostPredictor:
         n_splits_ = ap["n_splits"] if not self.scanner_mode else 3
 
         X, y, _ = prepare_training_data(df, self.feature_cols, max_samples=max_samp)
-        if X is None:
+        if X is None or y is None:
             return {"error": "학습 데이터 부족 (최소 60일 필요)"}
 
         log.info(
@@ -345,7 +346,7 @@ class XGBoostPredictor:
         log.warning("XGBoost 로드 실패 → GradientBoosting 폴백")
         self.feature_cols = get_feature_columns(df, include_sentiment)
         X, y, _ = prepare_training_data(df, self.feature_cols)
-        if X is None:
+        if X is None or y is None:
             return {"error": "학습 데이터 부족"}
 
         X_sc = self.scaler.fit_transform(X)
@@ -396,7 +397,7 @@ class LSTMPredictor:
     def __init__(self, sequence_length: int = 20, scanner_mode: bool = False):
         self.sequence_length = sequence_length
         self.scanner_mode = scanner_mode
-        self.model = None
+        self.model: Any = None
         self.scaler = StandardScaler()
         self.feature_cols: list[str] | None = None
         self.is_trained = False
@@ -428,7 +429,7 @@ class LSTMPredictor:
         self.feature_cols = get_feature_columns(df, include_sentiment)
         X, y, _ = prepare_training_data(df, self.feature_cols)
 
-        if X is None or len(X) < self.sequence_length + 20:
+        if X is None or y is None or len(X) < self.sequence_length + 20:
             return {"error": f"LSTM 학습 데이터 부족 (최소 {self.sequence_length + 20}일 필요)"}
 
         X_sc = self.scaler.fit_transform(X)
@@ -443,8 +444,8 @@ class LSTMPredictor:
 
         # CPU 전용 — scanner_mode 여부와 무관하게 CPU 사용
         pt_cfg = PYTORCH_SCANNER if self.scanner_mode else PYTORCH
-        device = torch.device(pt_cfg["device"])
-        torch.set_num_threads(pt_cfg["num_threads"])
+        device = torch.device(str(pt_cfg["device"]))
+        torch.set_num_threads(cast(int, pt_cfg["num_threads"]))
 
         SEQ = self.sequence_length
         X_seq = np.array([X_sc[i - SEQ:i] for i in range(SEQ, len(X_sc))])
@@ -456,7 +457,7 @@ class LSTMPredictor:
 
         Xtr, Xvl = to_t(X_seq[:split]), to_t(X_seq[split:])
         ytr, yvl = to_t(y_seq[:split].astype("float32")), to_t(y_seq[split:].astype("float32"))
-        batch_sz = pt_cfg["batch_size"]
+        batch_sz = cast(int, pt_cfg["batch_size"])
         n_feat = X_seq.shape[2]
 
         class _Net(nn.Module):
