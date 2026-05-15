@@ -43,16 +43,12 @@ def custom_openapi() -> dict:
     )
     # Swagger UI Bearer Token 인증 스키마 등록
     schema["components"]["securitySchemes"] = {
-        "BearerAuth": {
+        "HTTPBearer": {
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
         }
     }
-    for path in schema.get("paths", {}).values():
-        for operation in path.values():
-            if isinstance(operation, dict):
-                operation.setdefault("security", [{"BearerAuth": []}])
 
     app.openapi_schema = schema
     return schema
