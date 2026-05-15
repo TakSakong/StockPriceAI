@@ -52,4 +52,6 @@ async def fetch_stock_info(ticker: str) -> StockInfo:
         ticker=ticker.upper(),
         name=ticker.upper(),  # ML 서비스가 종목명을 제공하지 않아 티커로 대체
         current_price=indicators.get("close"),
+        marcket_cap=data.get("market_cap", 0),
+        sector=data.get("sector", "Unknown"),
     )
