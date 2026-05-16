@@ -2,7 +2,8 @@
 name = "stockai-backend"
 version = "0.1.0"
 description = "StockPriceAI Backend API — FastAPI + PostgreSQL"
-authors = ["StockPriceAI Team"]
+license = "MIT"
+authors = ["StockPriceAI Team <openmoresome@gmail.com>"]
 readme = "README.md"
 packages = [{ include = "app" }]
 
@@ -38,6 +39,7 @@ ignore = ["E501"]
 python_version = "3.11"
 strict = true
 ignore_missing_imports = true
+explicit_package_bases = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

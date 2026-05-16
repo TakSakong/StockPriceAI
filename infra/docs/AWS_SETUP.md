@@ -10,7 +10,7 @@ sudo usermod -aG docker ubuntu
 newgrp docker
 
 # 앱 디렉토리
-git clone https://github.com/your-org/StockPriceAI.git /app
+git clone https://github.com/TakSakong/StockPriceAI.git /app
 cd /app
 cp .env.example .env.prod
 # .env.prod에 RDS_URL, SECRET_KEY 등 실제 값 입력

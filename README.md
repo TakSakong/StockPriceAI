@@ -1,5 +1,7 @@
 # StockPriceAI
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 AI 기반 주식 분석 웹 서비스. XGBoost + LSTM 앙상블 예측, S&P 500 스캐너, 실시간 감성 분석을 제공합니다.
 
 > **현재 상태**: Phase 1 — 기반 환경 구성 완료  
@@ -249,7 +251,7 @@ StockPriceAI/
 
 ```bash
 # 1. 클론 및 환경 변수 설정
-git clone https://github.com/your-org/StockPriceAI.git
+git clone https://github.com/TakSakong/StockPriceAI.git
 cd StockPriceAI
 cp .env.example .env          # SECRET_KEY만 임의 값으로 변경
 
@@ -431,8 +433,8 @@ ML       : poetry install → ruff → pytest
 | ----- | ------------------------------------------------------ | ---------- | ------- |
 | 1     | 기반 환경 구성 (Docker Compose + Poetry + 브랜치 전략) | Week 1-2   | ✅ 완료 |
 | 2     | Backend API + JWT + RDS 연동 + Swagger                 | Week 3-5   | 🔜 예정 |
-| 3     | ML 서비스 이전 + Celery + Redis                        | Week 6-8   | 🔜 예정 |
-| 4     | Frontend (Next.js)                                     | Week 9-12  | 🔜 예정 |
+| 3     | ML 서비스 이전 + Celery + Redis                        | Week 6-8   | ✅ 완료 |
+| 4     | Frontend (Next.js)                                     | Week 9-12  | ✅ 완료 |
 | 5     | 테스트 + 코드 품질                                     | Week 13-14 | 🔜 예정 |
 | 6     | EC2/RDS 배포 + CI/CD + Vercel                          | Week 15-16 | 🔜 예정 |
 
@@ -465,6 +467,14 @@ ML       : poetry install → ruff → pytest
 | Backend      | 공탁 | FastAPI 인증/CRUD, RDS 연동, Swagger         |
 | ML           | 진우 | ML 서비스 이전, Celery 배치 작업, 예측 엔진  |
 | Infra/DevOps | 종윤 | EC2/RDS 설정, Docker Compose, GitHub Actions |
+
+---
+
+---
+
+## License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
 
 ---
 

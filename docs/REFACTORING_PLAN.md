@@ -375,7 +375,7 @@ sudo apt update && sudo apt install -y docker.io docker-compose-plugin git
 sudo usermod -aG docker ubuntu
 
 # 앱 디렉토리 준비
-git clone https://github.com/your-org/StockPriceAI.git /app
+git clone https://github.com/TakSakong/StockPriceAI.git /app
 cd /app && cp .env.example .env.prod
 # .env.prod에 RDS 주소, SECRET_KEY 등 입력
 ```
@@ -882,7 +882,7 @@ server {
 
 ```bash
 # 1. 저장소 클론
-git clone https://github.com/your-org/StockPriceAI.git
+git clone https://github.com/TakSakong/StockPriceAI.git
 cd StockPriceAI
 
 # 2. 환경 변수 설정
