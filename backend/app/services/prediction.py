@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 import httpx
 from fastapi import HTTPException, status
@@ -68,8 +69,6 @@ async def get_or_fetch_predictions(
     log.info(f"ML 예측 결과 DB 저장 완료: {ticker} → {new_prediction.signal}")
     return [PredictionOut.model_validate(new_prediction)]
 
-
-from typing import Any
 
 async def _call_ml_predict(ticker: str) -> dict[str, Any]:
     """ML 서비스의 /api/v1/predict 엔드포인트를 호출하여 예측 결과를 반환합니다.
