@@ -173,3 +173,41 @@ def run_scan_job(
         _save_progress(job_id, error_state)
         log.error(f"스캔 실패: job_id={job_id}, error={e}")
         raise
+
+
+@celery_app.task(name="scan_tasks.warmup_cache_task", ignore_result=True)
+def warmup_cache_task() -> str:
+    """
+    주기적으로 S&P 500 종목의 데이터를 수집하여 Redis 캐시를 최신화(웜업)합니다.
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    from ..pipelines.fetcher import fetch_stock_data
+    from ..pipelines.scanner import SP500_TICKERS
+
+    log.info(f"🔄 캐시 웜업 시작: {len(SP500_TICKERS)} 종목")
+    
+    success = 0
+    failed = 0
+    
+    # 웜업 시에는 무조건 yfinance를 호출하여 캐시를 덮어씌웁니다. (force_refresh=True)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futures = {
+            executor.submit(fetch_stock_data, ticker, 400, True): ticker
+            for ticker in SP500_TICKERS
+        }
+        for future in as_completed(futures):
+            ticker = futures[future]
+            try:
+                df, _ = future.result(timeout=30)
+                if df is not None:
+                    success += 1
+                else:
+                    failed += 1
+            except Exception as e:
+                failed += 1
+                log.warning(f"⚠️ 웜업 실패 [{ticker}]: {e}")
+
+    result_msg = f"✅ 캐시 웜업 완료: 성공 {success}, 실패 {failed}"
+    log.info(result_msg)
+    return result_msg

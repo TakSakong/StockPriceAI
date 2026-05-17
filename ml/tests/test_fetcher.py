@@ -126,7 +126,11 @@ class TestNormalizeTicker:
 # ─────────────────────────────────────────────────────────────
 
 class TestFetchStockData:
-    def test_returns_dataframe_and_info_on_success(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_returns_dataframe_and_info_on_success(self, mock_redis):
+        # mock redis to return None (cache miss)
+        mock_redis.return_value.get.return_value = None
+        
         from app.pipelines.fetcher import fetch_stock_data
 
         mock_ticker = _make_mock_ticker(
@@ -138,8 +142,12 @@ class TestFetchStockData:
 
         assert df is not None and info is not None
         assert len(df) == 60
+        # Verify cache was saved
+        mock_redis.return_value.setex.assert_called_once()
 
-    def test_ohlcv_columns_present(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_ohlcv_columns_present(self, mock_redis):
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         with patch("app.pipelines.fetcher.yf.Ticker", return_value=_make_mock_ticker()):
@@ -147,7 +155,9 @@ class TestFetchStockData:
 
         assert set(["Open", "High", "Low", "Close", "Volume"]).issubset(df.columns)
 
-    def test_columns_are_float32(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_columns_are_float32(self, mock_redis):
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         with patch("app.pipelines.fetcher.yf.Ticker", return_value=_make_mock_ticker()):
@@ -156,7 +166,9 @@ class TestFetchStockData:
         for col in ["Open", "High", "Low", "Close", "Volume"]:
             assert df[col].dtype == np.float32, f"{col} should be float32"
 
-    def test_timezone_aware_index_is_converted_to_naive(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_timezone_aware_index_is_converted_to_naive(self, mock_redis):
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         tz_hist = _make_price_df(60, tz_aware=True)
@@ -165,7 +177,9 @@ class TestFetchStockData:
 
         assert df.index.tz is None
 
-    def test_index_is_datetime(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_index_is_datetime(self, mock_redis):
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         with patch("app.pipelines.fetcher.yf.Ticker", return_value=_make_mock_ticker()):
@@ -173,7 +187,9 @@ class TestFetchStockData:
 
         assert isinstance(df.index, pd.DatetimeIndex)
 
-    def test_empty_history_returns_none_tuple(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_empty_history_returns_none_tuple(self, mock_redis):
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         mock_ticker = _make_mock_ticker(hist=pd.DataFrame())
@@ -182,7 +198,9 @@ class TestFetchStockData:
 
         assert df is None and info is None
 
-    def test_short_history_under_30_rows_returns_none(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_short_history_under_30_rows_returns_none(self, mock_redis):
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         mock_ticker = _make_mock_ticker(hist=_make_price_df(10))
@@ -191,15 +209,19 @@ class TestFetchStockData:
 
         assert df is None and info is None
 
-    def test_yfinance_exception_raises_value_error(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_yfinance_exception_raises_value_error(self, mock_redis):
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         with patch("app.pipelines.fetcher.yf.Ticker", side_effect=Exception("network error")):
             with pytest.raises(ValueError, match="데이터 수집 실패"):
                 fetch_stock_data("AAPL")
 
-    def test_period_zero_uses_max(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_period_zero_uses_max(self, mock_redis):
         """period_days=0 이면 history(period='max') 호출해야 함."""
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         mock_ticker = _make_mock_ticker(hist=_make_price_df(60))
@@ -208,8 +230,10 @@ class TestFetchStockData:
 
         mock_ticker.history.assert_called_once_with(period="max", auto_adjust=True)
 
-    def test_period_positive_uses_start_end(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_period_positive_uses_start_end(self, mock_redis):
         """period_days>0 이면 start/end 파라미터로 history 호출해야 함."""
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         mock_ticker = _make_mock_ticker(hist=_make_price_df(60))
@@ -219,8 +243,10 @@ class TestFetchStockData:
         call_kwargs = mock_ticker.history.call_args.kwargs
         assert "start" in call_kwargs and "end" in call_kwargs
 
-    def test_korean_ticker_normalized_before_request(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_korean_ticker_normalized_before_request(self, mock_redis):
         """6자리 숫자 종목코드가 .KS 형식으로 변환되어 yf.Ticker에 전달되어야 함."""
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         mock_ticker = _make_mock_ticker(hist=_make_price_df(60))
@@ -229,7 +255,9 @@ class TestFetchStockData:
 
         mock_yf.assert_called_once_with("005930.KS")
 
-    def test_financial_info_keys_extracted(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_financial_info_keys_extracted(self, mock_redis):
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         raw_info = {
@@ -247,8 +275,10 @@ class TestFetchStockData:
         assert info["sector"] == "Technology"
         assert "unknownKey" not in info
 
-    def test_info_fetch_failure_returns_empty_info(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_info_fetch_failure_returns_empty_info(self, mock_redis):
         """stock.info 접근 시 예외가 발생해도 price_df는 정상 반환해야 함."""
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         mock_ticker = _make_mock_ticker(hist=_make_price_df(60))
@@ -260,8 +290,10 @@ class TestFetchStockData:
         assert df is not None
         assert info == {}
 
-    def test_no_none_values_in_returned_info(self):
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_no_none_values_in_returned_info(self, mock_redis):
         """None 값을 가진 재무 항목은 info dict에서 제외되어야 함."""
+        mock_redis.return_value.get.return_value = None
         from app.pipelines.fetcher import fetch_stock_data
 
         raw_info = {"trailingPE": 28.5, "forwardPE": None, "sector": "Technology"}
@@ -270,6 +302,53 @@ class TestFetchStockData:
             _, info = fetch_stock_data("AAPL")
 
         assert "forwardPE" not in info
+
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_redis_cache_hit_returns_data_without_yfinance(self, mock_redis):
+        """Redis 캐시에 데이터가 있으면 yfinance를 호출하지 않고 반환해야 함."""
+        import json
+        
+        # Mock Redis return value
+        cached_json = json.dumps({
+            "info": {"shortName": "Apple", "trailingPE": 28.5},
+            "history": [
+                {"Date": "2024-01-01T00:00:00", "Open": 100, "High": 105, "Low": 99, "Close": 104, "Volume": 1000}
+            ]
+        })
+        mock_redis.return_value.get.return_value = cached_json
+        
+        from app.pipelines.fetcher import fetch_stock_data
+        
+        # yf.Ticker should not be called
+        with patch("app.pipelines.fetcher.yf.Ticker") as mock_yf:
+            df, info = fetch_stock_data("AAPL")
+            
+            mock_yf.assert_not_called()
+            
+            assert df is not None
+            assert len(df) == 1
+            assert df.index.name == "Date"
+            assert "Close" in df.columns
+            assert df.iloc[0]["Close"] == 104.0
+            
+            assert info is not None
+            assert info["shortName"] == "Apple"
+
+    @patch("app.pipelines.fetcher.redis.from_url")
+    def test_redis_cache_exception_falls_back_to_yfinance(self, mock_redis):
+        """Redis 연결/조회 중 예외 발생 시 yfinance로 폴백해야 함."""
+        mock_redis.return_value.get.side_effect = Exception("Redis connection error")
+        
+        from app.pipelines.fetcher import fetch_stock_data
+        
+        mock_ticker = _make_mock_ticker(hist=_make_price_df(60))
+        with patch("app.pipelines.fetcher.yf.Ticker", return_value=mock_ticker) as mock_yf:
+            df, info = fetch_stock_data("AAPL")
+            
+            # yfinance must be called
+            mock_yf.assert_called_once()
+            assert df is not None
+            assert len(df) == 60
 
 
 # ─────────────────────────────────────────────────────────────
