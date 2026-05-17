@@ -69,7 +69,9 @@ async def get_or_fetch_predictions(
     return [PredictionOut.model_validate(new_prediction)]
 
 
-async def _call_ml_predict(ticker: str) -> dict:
+from typing import Any
+
+async def _call_ml_predict(ticker: str) -> dict[str, Any]:
     """ML 서비스의 /api/v1/predict 엔드포인트를 호출하여 예측 결과를 반환합니다.
 
     Args:
@@ -90,7 +92,8 @@ async def _call_ml_predict(ticker: str) -> dict:
                 json={"ticker": ticker.upper()},
             )
             resp.raise_for_status()
-            return resp.json()
+            result: dict[str, Any] = resp.json()
+            return result
         except httpx.HTTPStatusError as e:
             raise HTTPException(
                 status_code=e.response.status_code,
