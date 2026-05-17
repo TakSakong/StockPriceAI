@@ -54,6 +54,7 @@ def fetch_stock_data(
     ticker = normalize_ticker(ticker)
     cache_key = f"fetcher:stock:{ticker}"
     r = None
+    info: dict = {}
 
     # 1. 내부 Redis 캐시에서 먼저 조회 시도 (force_refresh가 False일 때만)
     if not force_refresh:
@@ -106,7 +107,7 @@ def fetch_stock_data(
             hist[col] = hist[col].astype("float32")
         hist["Volume"] = hist["Volume"].astype("float32")
 
-        info: dict = {}
+        info = {}
         try:
             raw_info = stock.info
             financial_keys = [
