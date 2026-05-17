@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379/0"
 
     # Auth
-    SECRET_KEY: str  # 반드시 환경변수로 설정 필요 원래 있던 문자열로 jwt 토큰 생성 가능함.
+    SECRET_KEY: str = "super-secret-key-default"  # 기본값 부여  # 반드시 환경변수로 설정 필요 원래 있던 문자열로 jwt 토큰 생성 가능함.
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8 # 8시간
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
