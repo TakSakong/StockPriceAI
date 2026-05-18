@@ -30,14 +30,14 @@ async def create_scan_job(
 
 
 @router.get("/jobs/{job_id}", response_model=ScanJobOut, summary="스캔 작업 상태 조회")
-def get_scan_job(
+async def get_scan_job(
     job_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ScanJobOut:
     """특정 스캔 작업의 현재 상태(pending, processing, completed, failed)를 조회합니다.
     """
-    return scanner_service.get_scan_job(
+    return await scanner_service.get_scan_job(
         job_id=job_id,
         user_id=current_user.id,
         db=db,
@@ -45,14 +45,14 @@ def get_scan_job(
 
 
 @router.get("/jobs/{job_id}/results", response_model=list[ScanResultOut], summary="스캔 결과 조회")
-def get_scan_results(
+async def get_scan_results(
     job_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[ScanResultOut]:
     """완료된 스캔 작업의 상세 결과 리스트를 조회합니다.
     """
-    return scanner_service.get_scan_results(
+    return await scanner_service.get_scan_results(
         job_id=job_id,
         user_id=current_user.id,
         db=db,
