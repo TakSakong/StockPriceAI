@@ -4,11 +4,18 @@ Multi-source Data Ingestion Module
 - 한국/미국 주식 모두 지원
 """
 
+import json
+import logging
 import warnings
 from datetime import datetime, timedelta
 
 import pandas as pd
+import redis
 import yfinance as yf
+
+from ..core.config import settings
+
+log = logging.getLogger("stockai.fetcher")
 
 warnings.filterwarnings("ignore")
 
@@ -34,15 +41,49 @@ def normalize_ticker(ticker: str) -> str:
 def fetch_stock_data(
     ticker: str,
     period_days: int = 365,
+    force_refresh: bool = False,
 ) -> tuple[pd.DataFrame | None, dict | None]:
     """
     주가 데이터 및 재무정보 수집
+    1. ML 내부 Redis 캐시(settings.redis_url) 우선 확인
+    2. 캐시가 없으면 yfinance로 수집 후 Redis에 저장(TTL 24시간)
 
     Returns:
         (price_df, financials_dict)
     """
     ticker = normalize_ticker(ticker)
+    cache_key = f"fetcher:stock:{ticker}"
+    r = None
+    info: dict = {}
 
+    # 1. 내부 Redis 캐시에서 먼저 조회 시도 (force_refresh가 False일 때만)
+    if not force_refresh:
+        try:
+            r = redis.from_url(settings.redis_url, decode_responses=True)
+            cached_data = r.get(cache_key)
+            if cached_data:
+                data = json.loads(cached_data)
+                df = pd.DataFrame(data.get("history", []))
+                if not df.empty:
+                    df["Date"] = pd.to_datetime(df["Date"])
+                    df.set_index("Date", inplace=True)
+                    for col in ["Open", "High", "Low", "Close", "Volume"]:
+                        if col in df.columns:
+                            df[col] = df[col].astype("float32")
+                    info = data.get("info", {})
+                    log.info(f"✅ [{ticker}] 내부 Redis 캐시에서 데이터 로드 완료")
+                    return df, info
+        except Exception as e:
+            log.warning(f"⚠️ [{ticker}] Redis 캐시 조회 실패: {e}. yfinance로 폴백합니다.")
+    else:
+        # force_refresh가 True이면 무조건 새로 수집하기 위해 r만 초기화
+        try:
+            r = redis.from_url(settings.redis_url, decode_responses=True)
+        except Exception:
+            pass
+
+    # 2. 캐시 미스 또는 실패 시 yfinance 직접 호출 (폴백)
+    log.info(f"🌐 [{ticker}] yfinance에서 데이터 수집 중...")
     try:
         stock = yf.Ticker(ticker)
 
@@ -66,7 +107,7 @@ def fetch_stock_data(
             hist[col] = hist[col].astype("float32")
         hist["Volume"] = hist["Volume"].astype("float32")
 
-        info: dict = {}
+        info = {}
         try:
             raw_info = stock.info
             financial_keys = [
@@ -105,6 +146,23 @@ def fetch_stock_data(
                     info[key] = val
         except Exception:
             pass
+
+        # 3. yfinance 수집 성공 시 Redis에 저장 (TTL 24시간)
+        if r is not None and not hist.empty:
+            try:
+                hist_reset = hist.copy()
+                hist_reset.index.name = "Date"
+                hist_reset.reset_index(inplace=True)
+                hist_reset["Date"] = hist_reset["Date"].dt.strftime("%Y-%m-%dT%H:%M:%S")
+                cache_payload = {
+                    "info": info,
+                    "history": hist_reset.to_dict(orient="records")
+                }
+                # 하루(86400초) 캐시
+                r.setex(cache_key, 86400, json.dumps(cache_payload, default=str))
+                log.info(f"💾 [{ticker}] 새로운 데이터를 Redis 캐시에 저장했습니다. (TTL: 24h)")
+            except Exception as e:
+                log.warning(f"⚠️ [{ticker}] Redis 캐시 저장 실패: {e}")
 
         return hist, info
 
