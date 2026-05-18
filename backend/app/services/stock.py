@@ -32,7 +32,7 @@ def get_ml_redis_client() -> redis.Redis:
             url = url[:-2] + "/1"
         elif url.endswith("/0/"):
             url = url[:-3] + "/1"
-        _ml_redis_client = redis.from_url(url, decode_responses=True)
+        _ml_redis_client = redis.from_url(url, decode_responses=True)  # type: ignore[no-untyped-call]
     return _ml_redis_client
 
 
