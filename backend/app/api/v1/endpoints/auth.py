@@ -1,10 +1,18 @@
 from fastapi import APIRouter, Depends
+from fastapi.security import HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.auth import LoginRequest, RefreshRequest, RegisterRequest, TokenResponse, UserOut
-from app.services.auth import get_current_user, login_user, refresh_tokens, register_user
+from app.services.auth import (
+    bearer_scheme,
+    blacklist_token,
+    get_current_user,
+    login_user,
+    refresh_tokens,
+    register_user,
+)
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -47,7 +55,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)) -> TokenResponse
 
 
 @router.post("/refresh", response_model=TokenResponse, summary="Access Token 재발급")
-def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResponse:
+async def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResponse:
     """Refresh Token을 사용하여 새로운 Access Token을 재발급합니다.
     기존 Refresh Token의 유효성을 검사하고, 유효한 경우 새로운 토큰 세트를 반환합니다.
 
@@ -61,7 +69,16 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)) -> TokenResp
     Raises:
         HTTPException: 토큰이 만료되었거나 유효하지 않은 경우 401 Unauthorized 발생.
     """
-    return refresh_tokens(payload.refresh_token, db)
+    return await refresh_tokens(payload.refresh_token, db)
+
+
+@router.post("/logout", status_code=204, summary="로그아웃 (토큰 블랙리스트)")
+async def logout(
+    credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    """현재 로그인된 사용자의 Access Token을 블랙리스트에 추가하여 로그아웃 처리합니다."""
+    await blacklist_token(credentials.credentials)
 
 
 @router.get("/me", response_model=UserOut, summary="현재 로그인 사용자 조회")

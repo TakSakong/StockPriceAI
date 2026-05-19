@@ -51,3 +51,24 @@ def test_me(client: TestClient, auth_headers: dict) -> None:
 def test_me_unauthenticated(client: TestClient) -> None:
     resp = client.get("/v1/auth/me")
     assert resp.status_code == 403
+
+
+from unittest.mock import AsyncMock, patch
+
+@patch("app.services.auth.redis_client")
+def test_logout(mock_redis, client: TestClient, auth_headers: dict) -> None:
+    mock_redis.setex = AsyncMock()
+
+    resp = client.post("/v1/auth/logout", headers=auth_headers)
+    assert resp.status_code == 204
+    assert mock_redis.setex.called
+
+
+@patch("app.services.auth.redis_client")
+def test_authenticated_request_fails_if_blacklisted(mock_redis, client: TestClient, auth_headers: dict) -> None:
+    mock_redis.exists = AsyncMock(return_value=1)
+
+    resp = client.get("/v1/auth/me", headers=auth_headers)
+    assert resp.status_code == 401
+    assert resp.json()["detail"] == "Token is blacklisted"
+
