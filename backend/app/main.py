@@ -28,6 +28,15 @@ app.include_router(api_router)
 app.include_router(ws_router)
 
 
+import asyncio
+from app.services.scanner import run_background_queue_worker
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    asyncio.create_task(run_background_queue_worker())
+
+
+
 @app.get("/health", tags=["Health"])
 async def health() -> dict[str, str]:
     return {"status": "ok"}

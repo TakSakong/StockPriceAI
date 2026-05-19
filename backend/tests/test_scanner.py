@@ -11,54 +11,51 @@ from app.services.scanner import create_scan_job, get_scan_job, get_scan_results
 
 
 @pytest.mark.asyncio
-async def test_create_scan_job_success(setup_db, db_session: Session):
-    """스캔 작업 생성이 성공적으로 DB에 등록되고 ML 서비스를 정상 호출하는지 확인합니다."""
+@patch("app.services.scanner.redis_client")
+async def test_create_scan_job_success(mock_redis, setup_db, db_session: Session):
+    """스캔 작업 생성이 성공적으로 DB에 'queued' 상태로 등록되고 Redis 메시지 큐에 정상 Push되는지 확인합니다."""
     user_id = uuid.uuid4()
     sector = "Technology"
-    mock_ml_id = str(uuid.uuid4())
+    mock_redis.rpush = AsyncMock()
 
-    with patch("app.services.scanner.get_http_client") as mock_client_getter:
-        mock_client = AsyncMock()
-        mock_client_getter.return_value = mock_client
-        
-        mock_response = AsyncMock()
-        mock_response.status_code = 200
-        mock_response.json = lambda: {"job_id": mock_ml_id, "status": "queued"}
-        mock_client.post.return_value = mock_response
+    job = await create_scan_job(user_id=user_id, sector=sector, db=db_session)
 
-        job = await create_scan_job(user_id=user_id, sector=sector, db=db_session)
+    # 검증: 대기(queued) 상태로 생성되고 반환되었는지 확인
+    assert job.sector == sector
+    assert job.status == "queued"
+    
+    # Redis 메시지 큐에 정상 rpush 호출되었는지 확인
+    mock_redis.rpush.assert_called_once()
+    call_args = mock_redis.rpush.call_args[0]
+    assert call_args[0] == "backend:queue:scan_jobs"
+    
+    # 큐 등록 페이로드 정보 검증
+    payload = json.loads(call_args[1])
+    assert payload["job_id"] == str(job.id)
+    assert payload["sector"] == sector
 
-        # 검증: ML이 반환한 ID가 PK로 정상 등록되었는지 확인
-        assert str(job.id) == mock_ml_id
-        assert job.sector == sector
-        assert job.status == "pending"
-        
-        # ML 서비스 호출 확인
-        mock_client.post.assert_called_once()
-        call_args = mock_client.post.call_args[1]
-        assert sector in call_args["json"]["sector"]
 
+import json
 
 @pytest.mark.asyncio
-async def test_create_scan_job_ml_offline(setup_db, db_session: Session):
-    """ML 서비스가 꺼져있을 경우, 503 에러가 정상 반환되고 DB에 등록되지 않는지 확인합니다."""
+@patch("app.services.scanner.redis_client")
+async def test_create_scan_job_ml_offline(mock_redis, setup_db, db_session: Session):
+    """Redis 메시지 큐가 오프라인일 경우, 503 에러가 정상 반환되고 DB 작업 상태가 failed로 변경되는지 확인합니다."""
     user_id = uuid.uuid4()
     sector = "Technology"
+    mock_redis.rpush = AsyncMock(side_effect=Exception("Redis offline"))
 
-    with patch("app.services.scanner.get_http_client") as mock_client_getter:
-        mock_client = AsyncMock()
-        mock_client_getter.return_value = mock_client
-        mock_client.post.side_effect = httpx.RequestError("ML offline")
+    with pytest.raises(HTTPException) as exc_info:
+        await create_scan_job(user_id=user_id, sector=sector, db=db_session)
 
-        with pytest.raises(HTTPException) as exc_info:
-            await create_scan_job(user_id=user_id, sector=sector, db=db_session)
+    assert exc_info.value.status_code == 503
+    assert "Message queue unavailable" in exc_info.value.detail
 
-        assert exc_info.value.status_code == 503
-        assert "ML service unavailable" in exc_info.value.detail
+    # DB 검증: 상태가 failed로 자동 처리되었는지 확인
+    db_job = db_session.query(ScanJob).filter(ScanJob.user_id == user_id).first()
+    assert db_job is not None
+    assert db_job.status == "failed"
 
-        # DB 검증: 등록되지 않고 깨끗하게 복구되었는지 확인
-        db_job = db_session.query(ScanJob).filter(ScanJob.user_id == user_id).first()
-        assert db_job is None
 
 
 @pytest.mark.asyncio

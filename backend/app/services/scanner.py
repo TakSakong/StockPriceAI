@@ -1,5 +1,7 @@
 import logging
 import uuid
+import asyncio
+import json
 
 import httpx
 from fastapi import HTTPException, status
@@ -27,56 +29,109 @@ def get_http_client() -> httpx.AsyncClient:
 
 from sqlalchemy import func
 
+from app.core.redis import redis_client
+
 async def create_scan_job(
     user_id: uuid.UUID,
     sector: str | None,
     db: Session,
 ) -> ScanJobOut:
-    """새로운 섹터 스캔 작업을 생성하고 ML 서비스에 비동기 스캔을 요청합니다.
-
-    Args:
-        user_id (uuid.UUID): 작업을 요청한 사용자의 고유 ID.
-        sector (str | None): 스캔할 섹터명.
-        db (Session): 데이터베이스 세션 객체.
-
-    Returns:
-        ScanJobOut: 생성된 스캔 작업 정보.
-
-    Raises:
-        HTTPException: ML 서비스 연결에 실패하거나 비정상 응답인 경우 503 에러 발생.
-    """
-    client = get_http_client()
-    try:
-        # 1. ML 서비스에 비동기 스캔 트리거 요청 (ML 측에서 임의의 UUID를 자동 생성하여 결과 반환)
-        response = await client.post(
-            f"{settings.ML_SERVICE_URL}/api/v1/scanner/start",
-            json={"sector": sector},
-        )
-        if response.status_code not in (200, 201):
-            raise httpx.HTTPStatusError("ML returned non-success", request=None, response=response)
-        
-        data = response.json()
-        ml_job_id = uuid.UUID(data["job_id"])
-    except Exception as e:
-        log.error(f"❌ ML 서비스 비동기 스캔 트리거 실패: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="ML service unavailable",
-        )
-
-    # 2. ML 서비스가 돌려준 job_id를 기본 키(PK)로 지정하여 PostgreSQL DB에 기록 보존
+    """새로운 섹터 스캔 작업을 생성하고 백엔드 메시지 큐에 등록하여 순차적으로 수행되게 합니다."""
+    # 1. 백엔드 자체적으로 UUID 생성
+    backend_job_id = uuid.uuid4()
+    
+    # 2. PostgreSQL DB에 'queued' 상태로 기록 보존
     job = ScanJob(
-        id=ml_job_id,
+        id=backend_job_id,
         user_id=user_id,
         sector=sector,
-        status="pending",
+        status="queued",
     )
     db.add(job)
     db.commit()
     db.refresh(job)
 
-    log.info(f"🚀 스캔 작업 생성 완료 및 ML 트리거 성공: Job ID={job.id}, Sector={sector}")
+    # 3. Redis 메시지 큐에 등록
+    try:
+        await redis_client.rpush(
+            "backend:queue:scan_jobs",
+            json.dumps({"job_id": str(backend_job_id), "sector": sector})
+        )
+        log.info(f"📥 스캔 작업 대기열(큐) 진입 완료: Job ID={backend_job_id}, Sector={sector}")
+    except Exception as e:
+        log.error(f"❌ Redis 메시지 큐 등록 실패: {str(e)}")
+        # Redis 등록 실패 시 즉시 failed 처리
+        job.status = "failed"
+        job.finished_at = func.now()
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Message queue unavailable",
+        )
+
     return ScanJobOut.model_validate(job)
+
+
+from app.core.database import SessionLocal
+
+async def run_background_queue_worker() -> None:
+    """백엔드 자체 Redis 메시지 큐를 모니터링하여 ML 서비스가 감당할 수 있는 속도로 순차 호출(로드 레벨링)합니다."""
+    log.info("🌀 백엔드 메시지 큐 백그라운드 워커 가동 시작")
+    client = get_http_client()
+    
+    while True:
+        try:
+            # 1. 현재 실행 중(running)인 스캔 작업 개수를 DB에서 조회
+            with SessionLocal() as db:
+                running_count = db.query(ScanJob).filter(ScanJob.status == "running").count()
+                
+                # ML이 동시 감당할 수 있는 작업 수를 2개로 제한 (Rate Limiting)
+                if running_count < 2:
+                    # 2. Redis 큐에서 작업 하나 꺼내기 (LPOP)
+                    job_data_str = await redis_client.lpop("backend:queue:scan_jobs")
+                    if job_data_str:
+                        job_data = json.loads(job_data_str)
+                        backend_job_id = job_data["job_id"]
+                        sector = job_data.get("sector")
+                        
+                        log.info(f"📥 큐에서 스캔 작업 인출: Backend ID={backend_job_id}, Sector={sector}")
+                        
+                        # 3. ML 서비스 호출 시도
+                        try:
+                            response = await client.post(
+                                f"{settings.ML_SERVICE_URL}/api/v1/scanner/start",
+                                json={"sector": sector},
+                            )
+                            if response.status_code not in (200, 201):
+                                raise httpx.HTTPStatusError("ML returned non-success", request=None, response=response)
+                            
+                            data = response.json()
+                            ml_job_id = data["job_id"]
+                            
+                            # 4. Redis에 양방향 맵 저장 (UUID-A ◀─▶ UUID-B)
+                            await redis_client.setex(f"scan:job_map:backend:{backend_job_id}", 86400, ml_job_id)
+                            await redis_client.setex(f"scan:job_map:ml:{ml_job_id}", 86400, backend_job_id)
+                            
+                            # 5. DB 상태 업데이트
+                            job = db.query(ScanJob).filter(ScanJob.id == uuid.UUID(backend_job_id)).first()
+                            if job:
+                                job.status = "running"
+                                job.started_at = func.now()
+                                db.commit()
+                                log.info(f"🚀 스캔 작업 ML 연동 성공: Backend ID={backend_job_id} -> ML ID={ml_job_id}")
+                        except Exception as inner_e:
+                            db.rollback()
+                            log.error(f"❌ 큐 작업 ML 연동 실패: Backend ID={backend_job_id}, Error={str(inner_e)}")
+                            job = db.query(ScanJob).filter(ScanJob.id == uuid.UUID(backend_job_id)).first()
+                            if job:
+                                job.status = "failed"
+                                job.finished_at = func.now()
+                                db.commit()
+        except Exception as e:
+            log.error(f"⚠️ 백엔드 큐 워커 루프 중 오류 발생: {str(e)}")
+            
+        await asyncio.sleep(2.0)
+
 
 
 def is_sector_match(r_sector: str, job_sector: str) -> bool:
@@ -119,14 +174,18 @@ async def sync_job_status_from_ml(job_id: uuid.UUID, db: Session) -> ScanJob | N
     if not job:
         return None
 
-    # 이미 완료 또는 실패한 작업은 중복 호출 방지를 위해 패스
-    if job.status in ("completed", "failed"):
+    # 대기 중(queued)이거나 이미 완료/실패한 작업은 동기화 조회 중단
+    if job.status in ("completed", "failed", "queued"):
         return job
+
+    # Redis 양방향 매핑 확인
+    ml_job_id_str = await redis_client.get(f"scan:job_map:backend:{job_id}")
+    query_job_id = ml_job_id_str if ml_job_id_str else str(job_id)
 
     client = get_http_client()
     try:
         response = await client.get(
-            f"{settings.ML_SERVICE_URL}/api/v1/scanner/status/{job_id}"
+            f"{settings.ML_SERVICE_URL}/api/v1/scanner/status/{query_job_id}"
         )
         if response.status_code == 200:
             data = response.json()
