@@ -185,9 +185,11 @@ async def sync_job_status_from_ml(job_id: uuid.UUID, db: Session) -> ScanJob | N
                     db.commit()
                     db.refresh(job)
     except Exception as e:
-        log.warning(f"⚠️ ML 서비스로부터 스캔 상태 동기화 중 오류 발생: {str(e)}")
+        db.rollback()
+        log.warning(f"⚠️ ML 서비스로부터 스캔 상태 동기화 중 오류 발생 (트랜잭션 롤백 완료): {str(e)}")
 
     return job
+
 
 
 async def get_scan_job(

@@ -7,12 +7,12 @@ from fastapi import HTTPException, status
 
 from app.core.config import settings
 from app.schemas.stock import StockInfo
+from app.core.redis import ml_redis_client
 
 logger = logging.getLogger("stockai.backend.services.stock")
 
 # 커넥션 풀 재사용을 위한 글로벌 지연(Lazy) 초기화 클라이언트 변수
 _http_client: httpx.AsyncClient | None = None
-_ml_redis_client: redis.Redis | None = None
 
 
 def get_http_client() -> httpx.AsyncClient:
@@ -24,16 +24,8 @@ def get_http_client() -> httpx.AsyncClient:
 
 
 def get_ml_redis_client() -> redis.Redis:
-    """ML 서비스의 Redis DB 1용 클라이언트를 지연 초기화하여 반환합니다."""
-    global _ml_redis_client
-    if _ml_redis_client is None:
-        url = settings.REDIS_URL
-        if url.endswith("/0"):
-            url = url[:-2] + "/1"
-        elif url.endswith("/0/"):
-            url = url[:-3] + "/1"
-        _ml_redis_client = redis.from_url(url, decode_responses=True)  # type: ignore[no-untyped-call]
-    return _ml_redis_client
+    """ML 서비스의 Redis DB 1용 클라이언트를 반환합니다. (core/redis 모듈로 단일화)"""
+    return ml_redis_client
 
 
 async def fetch_stock_info(ticker: str) -> StockInfo:
