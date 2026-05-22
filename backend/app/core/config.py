@@ -11,9 +11,9 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379/0"
 
     # Auth
-    SECRET_KEY: str = "change-me-before-running"
+    SECRET_KEY: str = "super-secret-key-default"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 8 # 8시간
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
 
     # Services
