@@ -411,10 +411,11 @@ WS     /ws/scanner/{scan_id}
 트리거: PR → develop, main  /  develop 브랜치 push
         (동일 브랜치 신규 커밋 시 이전 실행 자동 취소)
 
-Frontend : npm ci → type-check → lint → vitest → next build
-Backend  : poetry install → ruff → mypy → pytest (커버리지 70%↑)
-ML       : poetry install → ruff → mypy → pytest (커버리지 70%↑)
-Docker   : backend/ml/frontend --target production 빌드 스모크 테스트
+Frontend    : npm ci → type-check → lint → vitest → next build
+Backend     : poetry install → ruff → mypy → pytest (커버리지 70%↑)
+ML          : poetry install → ruff → mypy → pytest (커버리지 70%↑)
+Docker      : backend/ml/frontend --target production 빌드 스모크 테스트
+Integration : docker compose up --wait → test_local.sh --skip-ml (e2e 연동 검증)
 ```
 
 ### CD — EC2 자동 배포
@@ -453,7 +454,7 @@ Docker   : backend/ml/frontend --target production 빌드 스모크 테스트
 | 2     | Backend API + JWT + RDS 연동 + Swagger                 | Week 3-5   | ✅ 완료 |
 | 3     | ML 서비스 이전 + Celery + Redis                        | Week 6-8   | ✅ 완료 |
 | 4     | Frontend (Next.js)                                     | Week 9-12  | ✅ 완료 |
-| 5     | 테스트 + 코드 품질                                     | Week 13-14 | 🔜 예정 |
+| 5     | 테스트 + 코드 품질                                     | Week 13-14 | ✅ 완료 |
 | 6     | EC2/RDS 배포 + CI/CD + Vercel                          | Week 15-16 | 🔜 진행 중 |
 
 CI/CD 및 배포 로드맵: [docs/CICD_ROADMAP.md](docs/CICD_ROADMAP.md)  
