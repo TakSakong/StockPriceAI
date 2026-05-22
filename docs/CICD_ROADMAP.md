@@ -27,7 +27,7 @@ main 브랜치 머지
         ├─ CI 완료 대기 (needs)
         ├─ ECR/GHCR 이미지 빌드 & 푸시 (도입 예정)
         ├─ Production EC2 SSH 접속 -> deploy.sh 실행
-        │    ├─ Blue-Green 무중단 배포 (Nginx upstream 전환)
+        │    ├─ Rolling Restart 무중단 배포 (docker compose up -d --no-deps 서비스별 순차 재시작)
         │    ├─ alembic upgrade head (DB 마이그레이션 자동화)
         │    └─ Nginx 경유 헬스체크 -> 실패 시 자동 롤백
         └─ Slack/이메일 알림
@@ -73,7 +73,7 @@ main 브랜치 머지
 > **목표**: AWS 기본 인프라를 구축하고 GitHub Actions를 통해 자동 배포를 수행합니다.
 
 #### 1. AWS 인프라 생성 ([`AWS_SETUP.md`](../infra/docs/AWS_SETUP.md) 절차 실행)
-* **EC2**: Ubuntu 22.04 LTS (t3.small 권장), 보안 그룹(SSH 22, HTTP 80, HTTPS 443) 설정
+* **EC2**: Ubuntu 22.04 LTS (**t3.medium 권장** — ML 서비스 + Celery OOM 방지에 4GB RAM 필요), 보안 그룹(SSH 22, HTTP 80, HTTPS 443) 설정
 * **RDS**: PostgreSQL 16 (db.t3.micro 프리티어), 퍼블릭 액세스 차단 (EC2 보안 그룹에서만 5432 허용)
 
 #### 2. ✅ `deploy.sh` 헬스체크 수정 ([`deploy.sh`](../infra/scripts/deploy.sh)) — **완료**
@@ -162,7 +162,7 @@ jobs:
 * **이미지 레지스트리 도입 (ECR/GHCR)**:
   - 현재: EC2 내에서 매번 `git pull` 후 소스 빌드 (3~10분 소요)
   - 개선: CI가 완료되면 이미지를 빌드해 레지스트리에 push하고, EC2는 이미지를 pull만 받아 재시작 (1분 미만 소요)
-* **Nginx 기반 Blue-Green 무중단 배포**: Nginx의 upstream 설정을 조작하여 트래픽 손실 없이 교체 배포 실행
+* **Rolling Restart 무중단 배포**: `docker compose up -d --no-deps <service>` 명령으로 서비스별 순차 재시작 (t3.medium 단일 인스턴스에서 Blue-Green은 컴테이너를 두 배로 돌려야 해 OOM 위험, Rolling Restart가 현실적인 대안)
 * **자동 롤백 시스템**: 배포 직후 헬스체크 응답이 비정상이면 자동으로 `git reset` 및 이전 안정 버전 컨테이너로 원복 실행
 
 ---
