@@ -55,6 +55,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml up --build -d
 | 이름         | 값                                     |
 | ------------ | -------------------------------------- |
 | `EC2_HOST`   | EC2 퍼블릭 IP 또는 도메인             |
+| `EC2_USER`   | EC2 로그인 사용자 이름 (보통 `ubuntu`) |
 | `EC2_SSH_KEY`| EC2 접속용 PEM 키 내용 (전체 텍스트)  |
 | `RDS_URL`    | `postgresql://user:pass@endpoint/db`   |
 | `SECRET_KEY` | JWT 서명 키 (openssl rand -hex 32)     |
