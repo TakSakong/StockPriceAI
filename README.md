@@ -432,13 +432,13 @@ ML       : poetry install → ruff → pytest
 | Phase | 내용                                                   | 기간       | 상태    |
 | ----- | ------------------------------------------------------ | ---------- | ------- |
 | 1     | 기반 환경 구성 (Docker Compose + Poetry + 브랜치 전략) | Week 1-2   | ✅ 완료 |
-| 2     | Backend API + JWT + RDS 연동 + Swagger                 | Week 3-5   | 🔜 예정 |
+| 2     | Backend API + JWT + RDS 연동 + Swagger                 | Week 3-5   | ✅ 완료 |
 | 3     | ML 서비스 이전 + Celery + Redis                        | Week 6-8   | ✅ 완료 |
 | 4     | Frontend (Next.js)                                     | Week 9-12  | ✅ 완료 |
 | 5     | 테스트 + 코드 품질                                     | Week 13-14 | 🔜 예정 |
-| 6     | EC2/RDS 배포 + CI/CD + Vercel                          | Week 15-16 | 🔜 예정 |
+| 6     | EC2/RDS 배포 + CI/CD + Vercel                          | Week 15-16 | 🔜 진행 중 |
 
-자세한 계획: [docs/REFACTORING_PLAN.md](docs/REFACTORING_PLAN.md)  
+CI/CD 및 배포 로드맵: [docs/CICD_ROADMAP.md](docs/CICD_ROADMAP.md)  
 기여 가이드: [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---

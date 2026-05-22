@@ -89,10 +89,19 @@ cd ../ml && poetry install && poetry shell
 ## PR 프로세스
 
 1. `develop` 브랜치에서 작업 브랜치를 분기
-2. 작업 완료 후 PR 생성 → `develop` 대상
-3. CI(lint + test) 통과 필수
-4. 팀원 1명 이상 리뷰 승인 후 Squash Merge
-5. `develop` → `main` 병합은 팀 전체 합의 후 진행
+2. **작업 중 다른 팀원의 PR이 `develop`에 머지된 경우** (push 전 필수):
+   ```bash
+   git pull origin develop        # 로컬 develop 최신화
+   git checkout {내-작업-브랜치}
+   git merge develop              # 개인 브랜치에 머지 & 충돌 해결
+   # 충돌 해결 완료 후
+   git push origin {내-작업-브랜치}
+   ```
+   > ⚠️ `develop`에 직접 push하거나 `git rebase origin/develop` 후 force push 금지
+3. 작업 완료 후 PR 생성 → `develop` 대상
+4. CI(lint + test) 통과 필수
+5. 팀원 1명 이상 리뷰 승인 후 Squash Merge
+6. `develop` → `main` 병합은 **통합 테스트(CI) 통과 확인 후** 팀 전체 합의 하에 진행
 
 ## 팀 역할 분담
 

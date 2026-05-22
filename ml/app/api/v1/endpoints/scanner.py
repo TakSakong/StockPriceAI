@@ -13,7 +13,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from ....pipelines.scanner import SP500_TICKERS, get_cache_stats
-from ....workers.scan_tasks import get_scan_progress, run_scan_job
+from ....workers.scan_tasks import _save_progress, get_scan_progress, run_scan_job
 
 router = APIRouter()
 log = logging.getLogger("stockai.api.scanner")
@@ -68,6 +68,22 @@ async def start_scan(req: ScanStartRequest):
     tickers = [t.strip().upper() for t in tickers]
 
     job_id = str(uuid.uuid4())
+
+    # apply_async 전에 초기 상태 저장 — worker가 태스크를 처리하기 전 status 조회 시 404 방지
+    _save_progress(
+        job_id,
+        {
+            "job_id": job_id,
+            "status": "queued",
+            "total": len(tickers),
+            "done": 0,
+            "pct": 0.0,
+            "cached": 0,
+            "refreshed": 0,
+            "failed": 0,
+            "current_ticker": "",
+        },
+    )
 
     try:
         run_scan_job.apply_async(

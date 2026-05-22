@@ -4,6 +4,25 @@
 
 ---
 
+## 빠른 시작 — 자동화 스크립트
+
+섹션 3~6, 8의 HTTP/WebSocket 테스트를 자동으로 실행합니다. `docker compose up -d` 이후 아래 명령을 실행하세요.
+
+```bash
+# 기본 실행 (ML 단일 예측 제외, ~30초)
+./scripts/test_local.sh
+
+# ML 서비스 테스트 전체 건너뜀
+./scripts/test_local.sh --skip-ml
+
+# ML 단일 예측 포함 (최대 2분)
+./scripts/test_local.sh --full
+```
+
+WebSocket 테스트를 사용하려면 `pip install websockets`가 필요합니다. 프론트엔드 UI 체크리스트(섹션 7)는 브라우저 직접 확인이 필요합니다.
+
+---
+
 ## 목차
 
 1. [사전 준비](#1-사전-준비)
@@ -49,7 +68,7 @@ REDIS_URL=redis://redis:6379/0
 CELERY_BROKER_URL=redis://redis:6379/2
 SECRET_KEY=<임의의 문자열>
 ML_SERVICE_URL=http://ml:8001
-NEXT_PUBLIC_API_URL=http://localhost/api
+NEXT_PUBLIC_API_URL=http://localhost
 NEXT_PUBLIC_ML_URL=http://localhost/ml
 NEXT_PUBLIC_WS_URL=ws://localhost
 ```
@@ -84,6 +103,11 @@ docker compose logs -f postgres
 docker compose restart
 ```
 
+> **주의**: `NEXT_PUBLIC_*` 환경변수는 Next.js 빌드 시 번들에 포함됩니다. 해당 값을 변경한 경우 `restart`만으로는 반영되지 않으며, 컨테이너를 내렸다 올려야 합니다.
+> ```bash
+> docker compose down && docker compose up -d
+> ```
+
 ### 코드 변경 후 재빌드
 
 ```bash
@@ -114,7 +138,7 @@ curl -s http://localhost:8000/health | python3 -m json.tool
 curl -s http://localhost:8001/health | python3 -m json.tool
 
 # 기대 응답
-# {"status": "ok", "service": "backend"}
+# {"status": "ok"}
 # {"status": "ok", "service": "ml"}
 ```
 
@@ -157,8 +181,7 @@ curl -s -X POST http://localhost:8000/api/v1/auth/register \
 # 기대 응답 (201)
 # {
 #   "id": "...",
-#   "email": "test@example.com",
-#   "created_at": "..."
+#   "email": "test@example.com"
 # }
 ```
 
@@ -253,6 +276,7 @@ curl -s -X POST http://localhost:8001/api/v1/predict \
 #   "down_probability": 0.37,
 #   "confidence": 0.63,
 #   "model": "xgboost" | "ensemble",
+#   "ensemble_detail": {...} | null,
 #   "training_metrics": {...},
 #   "technical_summary": {...}
 # }
@@ -315,12 +339,20 @@ brew install node && npm install -g wscat
 
 ```bash
 # 먼저 스캔을 시작하고 job_id를 얻은 후 연결
-wscat -c "ws://localhost:8001/ws/scanner/$SCAN_JOB_ID"
+wscat -c "ws://localhost/ws/scanner/$SCAN_JOB_ID"
 
 # 1초마다 진행 상황이 JSON으로 수신됩니다:
-# {"job_id": "...", "status": "running", "processed": 2, "total": 5, "result_count": 2, "top_results": [...]}
+# {
+#   "job_id": "...", "status": "running",
+#   "done": 2, "total": 5, "pct": 40.0,
+#   "cached": 1, "refreshed": 1, "failed": 0,
+#   "current_ticker": "MSFT",
+#   "result_count": 2, "top_results": [...]
+# }
 # 완료 시: {"status": "completed", ...}
 ```
+
+> **참고**: `ws://localhost/ws/scanner/` 는 Nginx를 통해 ML 서비스 WebSocket으로 직접 라우팅됩니다.
 
 ### 6-3. Python으로 WebSocket 테스트
 
@@ -333,11 +365,11 @@ import websockets
 JOB_ID = "여기에_job_id_입력"
 
 async def watch():
-    uri = f"ws://localhost:8001/ws/scanner/{JOB_ID}"
+    uri = f"ws://localhost/ws/scanner/{JOB_ID}"
     async with websockets.connect(uri) as ws:
         async for msg in ws:
             data = json.loads(msg)
-            print(f"[{data['status']}] {data.get('processed', 0)}/{data.get('total', '?')}")
+            print(f"[{data['status']}] {data.get('done', 0)}/{data.get('total', '?')}")
             if data["status"] in ("completed", "failed"):
                 break
 
@@ -397,11 +429,9 @@ python3 test_ws.py
 ```
 
 ```bash
-# 1. 백엔드 통해 예측 요청 (백엔드가 ML에 프록시)
-curl -s -X POST http://localhost:8000/api/v1/predictions \
+# 1. 백엔드 통해 예측 이력 조회 (없으면 ML에 요청 후 DB 저장)
+curl -s http://localhost:8000/api/v1/predictions/MSFT \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"ticker": "MSFT"}' \
   | python3 -m json.tool
 ```
 
@@ -423,7 +453,7 @@ JOB_ID=$(curl -s -X POST http://localhost:8000/api/v1/scanner/jobs \
 curl -s http://localhost:8001/api/v1/scanner/status/$JOB_ID | python3 -m json.tool
 
 # 3. WebSocket으로 실시간 진행률 구독
-wscat -c "ws://localhost:8001/ws/scanner/$JOB_ID"
+wscat -c "ws://localhost/ws/scanner/$JOB_ID"
 ```
 
 ### 시나리오 3: Celery 워커 동작 확인
@@ -490,6 +520,24 @@ docker compose restart celery_worker
 
 # Redis 브로커 상태
 docker compose exec redis redis-cli -n 2 INFO keyspace
+```
+
+### 프론트엔드에서 "종목을 찾을 수 없습니다" 오류 (nginx 404)
+
+로그에서 `/api/api/v1/stocks/...` 처럼 `/api`가 이중으로 붙어 있다면 `NEXT_PUBLIC_API_URL` 값이 잘못 설정된 것입니다.
+
+```
+# 잘못된 설정 (이중 prefix 발생)
+NEXT_PUBLIC_API_URL=http://localhost/api   ← /api 포함하면 안 됨
+
+# 올바른 설정
+NEXT_PUBLIC_API_URL=http://localhost
+```
+
+`docker-compose.yml`과 `.env.example` 모두 `http://localhost`로 설정되어 있는지 확인하고, 변경 후 컨테이너를 재시작하세요.
+
+```bash
+docker compose down && docker compose up -d
 ```
 
 ### 프론트엔드 빌드 오류
