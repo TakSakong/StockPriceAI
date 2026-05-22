@@ -84,14 +84,34 @@ curl -sf http://localhost/api/health && echo " backend OK"
 curl -sf http://localhost/ml/health  && echo " ml OK"
 ```
 
-#### 3. `.github/workflows/cd.yml` 작성
-`main` 브랜치에 푸시/머지 시 작동하는 CD 워크플로우를 추가합니다.
+#### 3. GitHub 브랜치 보호 규칙 설정 (cd.yml 추가 전 필수)
+
+> **주의**: CD 워크플로우는 별도 파일이므로 `needs:`로 CI 워크플로우 완료를 직접 연결할 수 없습니다.
+> CI 통과 없이 `main`에 머지되는 것을 코드 레벨에서 막으려면 **GitHub 브랜치 보호 규칙**이 반드시 선행되어야 합니다.
+
+GitHub 저장소 → **Settings → Branches → Add rule** 에서 아래 규칙을 적용합니다.
+
+| 브랜치 | 설정 항목 | 값 |
+|--------|-----------|-----|
+| `main` | Require a pull request before merging | ✅ |
+| `main` | Require status checks to pass: `backend`, `ml`, `frontend`, `docker` | ✅ |
+| `main` | Do not allow bypassing the above settings | ✅ |
+| `develop` | Require a pull request before merging | ✅ |
+| `develop` | Require status checks to pass: `backend`, `ml`, `frontend`, `docker` | ✅ |
+
+이 설정이 완료된 이후에야 CD 배포가 "CI 통과된 코드만 main에 올 수 있다"는 보장 위에서 동작합니다.
+
+#### 4. `.github/workflows/cd.yml` 작성
+`main` 브랜치에 머지(push) 시 작동하는 CD 워크플로우를 추가합니다.
 ```yaml
 name: CD
 
 on:
   push:
     branches: [main]
+    # ↑ PR 머지 시 GitHub이 발생시키는 push 이벤트로 트리거됨.
+    #   브랜치 보호 규칙(위 3번 항목)으로 CI 통과 없이는
+    #   main에 머지 자체가 불가능하도록 강제해야 함.
 
 concurrency:
   group: cd-production
