@@ -4,6 +4,25 @@
 
 ---
 
+## 빠른 시작 — 자동화 스크립트
+
+섹션 3~6, 8의 HTTP/WebSocket 테스트를 자동으로 실행합니다. `docker compose up -d` 이후 아래 명령을 실행하세요.
+
+```bash
+# 기본 실행 (ML 단일 예측 제외, ~30초)
+./scripts/test_local.sh
+
+# ML 서비스 테스트 전체 건너뜀
+./scripts/test_local.sh --skip-ml
+
+# ML 단일 예측 포함 (최대 2분)
+./scripts/test_local.sh --full
+```
+
+WebSocket 테스트를 사용하려면 `pip install websockets`가 필요합니다. 프론트엔드 UI 체크리스트(섹션 7)는 브라우저 직접 확인이 필요합니다.
+
+---
+
 ## 목차
 
 1. [사전 준비](#1-사전-준비)
