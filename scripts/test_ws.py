@@ -28,9 +28,9 @@ async def watch():
                     raw = await asyncio.wait_for(ws.recv(), timeout=TIMEOUT)
                     data = json.loads(raw)
                     status = data.get("status", "?")
-                    processed = data.get("processed", 0)
+                    done = data.get("done", 0)
                     total = data.get("total", "?")
-                    print(f"[{status}] {processed}/{total}")
+                    print(f"[{status}] {done}/{total}")
                     if status in ("completed", "failed"):
                         break
                 except asyncio.TimeoutError:

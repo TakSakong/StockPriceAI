@@ -176,8 +176,7 @@ curl -s -X POST http://localhost:8000/api/v1/auth/register \
 # 기대 응답 (201)
 # {
 #   "id": "...",
-#   "email": "test@example.com",
-#   "created_at": "..."
+#   "email": "test@example.com"
 # }
 ```
 
@@ -272,6 +271,7 @@ curl -s -X POST http://localhost:8001/api/v1/predict \
 #   "down_probability": 0.37,
 #   "confidence": 0.63,
 #   "model": "xgboost" | "ensemble",
+#   "ensemble_detail": {...} | null,
 #   "training_metrics": {...},
 #   "technical_summary": {...}
 # }
@@ -337,9 +337,17 @@ brew install node && npm install -g wscat
 wscat -c "ws://localhost/ws/scanner/$SCAN_JOB_ID"
 
 # 1초마다 진행 상황이 JSON으로 수신됩니다:
-# {"job_id": "...", "status": "running", "processed": 2, "total": 5, "result_count": 2, "top_results": [...]}
+# {
+#   "job_id": "...", "status": "running",
+#   "done": 2, "total": 5, "pct": 40.0,
+#   "cached": 1, "refreshed": 1, "failed": 0,
+#   "current_ticker": "MSFT",
+#   "result_count": 2, "top_results": [...]
+# }
 # 완료 시: {"status": "completed", ...}
 ```
+
+> **참고**: `ws://localhost/ws/scanner/` 는 Nginx를 통해 ML 서비스 WebSocket으로 직접 라우팅됩니다.
 
 ### 6-3. Python으로 WebSocket 테스트
 
@@ -356,7 +364,7 @@ async def watch():
     async with websockets.connect(uri) as ws:
         async for msg in ws:
             data = json.loads(msg)
-            print(f"[{data['status']}] {data.get('processed', 0)}/{data.get('total', '?')}")
+            print(f"[{data['status']}] {data.get('done', 0)}/{data.get('total', '?')}")
             if data["status"] in ("completed", "failed"):
                 break
 
@@ -416,11 +424,9 @@ python3 test_ws.py
 ```
 
 ```bash
-# 1. 백엔드 통해 예측 요청 (백엔드가 ML에 프록시)
-curl -s -X POST http://localhost:8000/api/v1/predictions \
+# 1. 백엔드 통해 예측 이력 조회 (없으면 ML에 요청 후 DB 저장)
+curl -s http://localhost:8000/api/v1/predictions/MSFT \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"ticker": "MSFT"}' \
   | python3 -m json.tool
 ```
 
