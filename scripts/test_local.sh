@@ -280,13 +280,28 @@ fi
 section "6. WebSocket 테스트"
 
 WS_SCRIPT="$(dirname "$0")/../scripts/test_ws.py"
+WS_VENV="/tmp/stockai-ws-venv"
+WS_PYTHON="python3"
+
+# websockets 없으면 임시 venv에 자동 설치
+if ! python3 -c "import websockets" 2>/dev/null; then
+  echo -e "  ${YELLOW}⏳${RESET} websockets 없음 → 임시 venv 준비 중..."
+  if [[ ! -x "$WS_VENV/bin/python3" ]]; then
+    python3 -m venv "$WS_VENV" 2>/dev/null
+    "$WS_VENV/bin/pip" install websockets -q 2>/dev/null
+  fi
+  if "$WS_VENV/bin/python3" -c "import websockets" 2>/dev/null; then
+    WS_PYTHON="$WS_VENV/bin/python3"
+  fi
+fi
+
 if [[ -z ${SCAN_JOB_ID:-} ]]; then
   skip "WebSocket 테스트 (스캔 job_id 없음 — ML 테스트가 건너뛰어졌거나 실패)"
-elif ! python3 -c "import websockets" 2>/dev/null; then
-  skip "WebSocket 테스트 (pip install websockets 필요)"
+elif ! $WS_PYTHON -c "import websockets" 2>/dev/null; then
+  skip "WebSocket 테스트 (websockets venv 설치 실패)"
 else
-  WS_OUT=$(python3 "$WS_SCRIPT" "$SCAN_JOB_ID" 2>&1 || echo "ERROR")
-  if echo "$WS_OUT" | grep -q "completed\|failed\|running"; then
+  WS_OUT=$($WS_PYTHON "$WS_SCRIPT" "$SCAN_JOB_ID" 2>&1 || echo "ERROR")
+  if echo "$WS_OUT" | grep -q "completed\|failed\|running\|queued"; then
     pass "WebSocket 연결 및 메시지 수신"
   else
     fail "WebSocket 테스트 실패: $WS_OUT"
