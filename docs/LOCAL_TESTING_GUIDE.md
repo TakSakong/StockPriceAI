@@ -114,7 +114,7 @@ curl -s http://localhost:8000/health | python3 -m json.tool
 curl -s http://localhost:8001/health | python3 -m json.tool
 
 # 기대 응답
-# {"status": "ok", "service": "backend"}
+# {"status": "ok"}
 # {"status": "ok", "service": "ml"}
 ```
 
@@ -423,7 +423,7 @@ JOB_ID=$(curl -s -X POST http://localhost:8000/api/v1/scanner/jobs \
 curl -s http://localhost:8001/api/v1/scanner/status/$JOB_ID | python3 -m json.tool
 
 # 3. WebSocket으로 실시간 진행률 구독
-wscat -c "ws://localhost:8001/ws/scanner/$JOB_ID"
+wscat -c "ws://localhost/ws/scanner/$JOB_ID"
 ```
 
 ### 시나리오 3: Celery 워커 동작 확인
