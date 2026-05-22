@@ -127,3 +127,77 @@ def test_run_scan_job_saves_failed_state_on_exception(mock_scan, mock_save) -> N
     # failed 상태가 저장되었는지 확인
     saved_states = [call[0][1] for call in mock_save.call_args_list]
     assert any(s.get("status") == "failed" for s in saved_states)
+
+
+# ── _get_redis ────────────────────────────────────────────────
+
+@patch("app.workers.scan_tasks.redis.from_url")
+def test_get_redis_calls_from_url(mock_from_url) -> None:
+    """_get_redis가 settings.redis_url로 redis.from_url을 호출한다."""
+    from app.workers.scan_tasks import _get_redis
+
+    mock_from_url.return_value = MagicMock()
+    result = _get_redis()
+    mock_from_url.assert_called_once()
+    assert result is mock_from_url.return_value
+
+
+# ── run_scan_job non-empty result ─────────────────────────────
+
+@patch("app.workers.scan_tasks._save_progress")
+@patch("app.pipelines.scanner.run_sp500_scan")
+def test_run_scan_job_returns_top_results_when_scan_has_data(mock_scan, mock_save) -> None:
+    """스캔 결과가 있으면 top_results에 데이터가 담겨 반환된다."""
+    from app.workers.celery_app import celery_app
+    from app.workers.scan_tasks import run_scan_job
+
+    scan_df = pd.DataFrame([{
+        "ticker": "AAPL", "name": "Apple", "sector": "Tech",
+        "composite_score": 0.9, "up_probability": 0.8,
+        "estimated_upside": 0.15, "ml_signal": "BUY",
+        "current_price": 190.0, "rsi": 55.0,
+        "buy_signals": 3, "market_cap": 3e12,
+    }])
+    mock_scan.return_value = (scan_df, {})
+
+    celery_app.conf.task_always_eager = True
+    try:
+        result = run_scan_job.apply(
+            kwargs={"job_id": "job-data", "tickers": ["AAPL"], "max_workers": 1}
+        ).get()
+    finally:
+        celery_app.conf.task_always_eager = False
+
+    assert result["status"] == "completed"
+    assert len(result["results"]) == 1
+    assert result["results"][0]["ticker"] == "AAPL"
+
+
+# ── on_progress callback ──────────────────────────────────────
+
+@patch("app.workers.scan_tasks._save_progress")
+@patch("app.pipelines.scanner.run_sp500_scan")
+def test_run_scan_job_progress_callback_is_invoked(mock_scan, mock_save) -> None:
+    """run_sp500_scan이 progress_callback을 호출하면 _save_progress가 running 상태로 기록된다."""
+    from app.workers.celery_app import celery_app
+    from app.workers.scan_tasks import run_scan_job
+
+    def fake_scan(tickers, max_workers, force_refresh, period_days, progress, progress_callback):
+        progress_callback({"done": 1, "total": 1, "pct": 100.0, "cached": 0,
+                           "refreshed": 1, "failed": 0, "current_ticker": "AAPL",
+                           "elapsed_sec": 0.1, "eta_sec": None})
+        return (pd.DataFrame(), {})
+
+    mock_scan.side_effect = fake_scan
+
+    celery_app.conf.task_always_eager = True
+    try:
+        result = run_scan_job.apply(
+            kwargs={"job_id": "job-cb", "tickers": ["AAPL"], "max_workers": 1}
+        ).get()
+    finally:
+        celery_app.conf.task_always_eager = False
+
+    assert result["status"] == "completed"
+    running_calls = [c for c in mock_save.call_args_list if c[0][1].get("status") == "running"]
+    assert len(running_calls) >= 2  # 초기 + callback 호출
