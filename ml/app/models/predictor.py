@@ -239,7 +239,9 @@ class XGBoostPredictor:
         self.training_metrics: dict[str, Any] = {}
         self._cv_proba: npt.NDArray[Any] | None = None
 
-    def train(self, df: pd.DataFrame, include_sentiment: bool = True, n_splits: int = 5) -> dict[str, Any]:
+    def train(
+        self, df: pd.DataFrame, include_sentiment: bool = True, n_splits: int = 5
+    ) -> dict[str, Any]:
         try:
             import xgboost as xgb
 

@@ -10,9 +10,10 @@ import os
 import time
 import traceback
 import warnings
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
-from typing import Any, Callable, cast
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd

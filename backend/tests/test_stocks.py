@@ -67,7 +67,7 @@ def test_get_stock_cache_miss_calls_ml_technical(mock_get_redis, mock_get_http, 
     mock_redis.get.side_effect = [None, _cache_payload()]
     mock_get_redis.return_value = mock_redis
 
-    mock_resp = AsyncMock()
+    mock_resp = MagicMock()
     mock_resp.raise_for_status = MagicMock()
     mock_resp.json.return_value = {"latest_indicators": {"close": 190.0}}
     mock_http_client = AsyncMock()
