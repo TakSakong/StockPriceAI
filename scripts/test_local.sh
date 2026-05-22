@@ -104,6 +104,15 @@ if [[ $SKIP_ML == false ]]; then
   fi
 fi
 
+# Nginx → Backend 라우팅: /api/v1/stocks 경로가 이중 prefix 없이 전달되는지 확인
+# NEXT_PUBLIC_API_URL에 /api가 포함되면 /api/api/v1/... 가 되어 404 발생
+STOCKS_CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$NGINX/api/v1/stocks/AAPL" 2>/dev/null || echo "000")
+if [[ $STOCKS_CODE == "200" || $STOCKS_CODE == "401" || $STOCKS_CODE == "422" ]]; then
+  pass "Nginx /api/v1/stocks 라우팅 정상 → HTTP $STOCKS_CODE (404 아님)"
+else
+  fail "Nginx /api/v1/stocks 라우팅 오류 → HTTP $STOCKS_CODE (NEXT_PUBLIC_API_URL에 /api 포함 여부 확인)"
+fi
+
 # PostgreSQL
 if docker compose -f "$(dirname "$0")/../docker-compose.yml" exec -T postgres \
      psql -U stockai -d stockai -c "\dt" 2>/dev/null | grep -q "users"; then

@@ -68,7 +68,7 @@ REDIS_URL=redis://redis:6379/0
 CELERY_BROKER_URL=redis://redis:6379/2
 SECRET_KEY=<임의의 문자열>
 ML_SERVICE_URL=http://ml:8001
-NEXT_PUBLIC_API_URL=http://localhost/api
+NEXT_PUBLIC_API_URL=http://localhost
 NEXT_PUBLIC_ML_URL=http://localhost/ml
 NEXT_PUBLIC_WS_URL=ws://localhost
 ```
@@ -102,6 +102,11 @@ docker compose logs -f postgres
 ```bash
 docker compose restart
 ```
+
+> **주의**: `NEXT_PUBLIC_*` 환경변수는 Next.js 빌드 시 번들에 포함됩니다. 해당 값을 변경한 경우 `restart`만으로는 반영되지 않으며, 컨테이너를 내렸다 올려야 합니다.
+> ```bash
+> docker compose down && docker compose up -d
+> ```
 
 ### 코드 변경 후 재빌드
 
@@ -515,6 +520,24 @@ docker compose restart celery_worker
 
 # Redis 브로커 상태
 docker compose exec redis redis-cli -n 2 INFO keyspace
+```
+
+### 프론트엔드에서 "종목을 찾을 수 없습니다" 오류 (nginx 404)
+
+로그에서 `/api/api/v1/stocks/...` 처럼 `/api`가 이중으로 붙어 있다면 `NEXT_PUBLIC_API_URL` 값이 잘못 설정된 것입니다.
+
+```
+# 잘못된 설정 (이중 prefix 발생)
+NEXT_PUBLIC_API_URL=http://localhost/api   ← /api 포함하면 안 됨
+
+# 올바른 설정
+NEXT_PUBLIC_API_URL=http://localhost
+```
+
+`docker-compose.yml`과 `.env.example` 모두 `http://localhost`로 설정되어 있는지 확인하고, 변경 후 컨테이너를 재시작하세요.
+
+```bash
+docker compose down && docker compose up -d
 ```
 
 ### 프론트엔드 빌드 오류
