@@ -1,8 +1,10 @@
 
 import asyncio
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from app.services import scanner as scanner_service
+
 from app.core.config import settings
+from app.services import scanner as scanner_service
 
 router = APIRouter(tags=["WebSocket"])
 

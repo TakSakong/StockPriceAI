@@ -6,8 +6,8 @@ import redis.asyncio as redis
 from fastapi import HTTPException, status
 
 from app.core.config import settings
-from app.schemas.stock import StockInfo
 from app.core.redis import ml_redis_client
+from app.schemas.stock import StockInfo
 
 logger = logging.getLogger("stockai.backend.services.stock")
 

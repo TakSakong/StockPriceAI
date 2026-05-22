@@ -1,5 +1,5 @@
-from datetime import datetime, timezone, timedelta
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import httpx
@@ -55,9 +55,9 @@ async def get_or_fetch_predictions(
         created_at = latest_row.created_at
         # SQLite 등 테스트 환경에서 datetime에 시간대(tzinfo) 정보가 유실되는 경우를 대비해 보정합니다.
         if created_at.tzinfo is None:
-            created_at = created_at.replace(tzinfo=timezone.utc)
+            created_at = created_at.replace(tzinfo=UTC)
             
-        time_diff = datetime.now(timezone.utc) - created_at
+        time_diff = datetime.now(UTC) - created_at
         if time_diff < timedelta(hours=24):
             is_fresh = True
 

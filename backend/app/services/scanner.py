@@ -3,6 +3,7 @@ import uuid
 
 import httpx
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
@@ -24,8 +25,6 @@ def get_http_client() -> httpx.AsyncClient:
         _http_client = httpx.AsyncClient(timeout=5.0)
     return _http_client
 
-
-from sqlalchemy import func
 
 async def create_scan_job(
     user_id: uuid.UUID,
@@ -53,7 +52,7 @@ async def create_scan_job(
             json={"sector": sector},
         )
         if response.status_code not in (200, 201):
-            raise httpx.HTTPStatusError("ML returned non-success", request=None, response=response)
+            raise httpx.HTTPStatusError("ML returned non-success", request=response.request, response=response)
         
         data = response.json()
         ml_job_id = uuid.UUID(data["job_id"])

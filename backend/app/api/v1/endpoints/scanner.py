@@ -6,8 +6,8 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.models.user import User
 from app.schemas.scanner import ScanJobCreate, ScanJobOut, ScanResultOut
-from app.services.auth import get_current_user
 from app.services import scanner as scanner_service
+from app.services.auth import get_current_user
 
 router = APIRouter(prefix="/scanner", tags=["Scanner"])
 
