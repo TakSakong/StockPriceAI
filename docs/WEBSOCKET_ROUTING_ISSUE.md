@@ -170,7 +170,7 @@ wscat -c "ws://localhost:8001/ws/scanner/$SCAN_JOB_ID"
 
 - [x] `infra/nginx/nginx.conf` — `/ws/scanner/` 블록 추가
 - [x] `docs/LOCAL_TESTING_GUIDE.md` L318, L336 — URL을 `ws://localhost/ws/scanner/...`로 수정
-- [ ] 로컬에서 `docker compose up --build -d` 후 WebSocket 연결 재테스트
+- [x] 로컬에서 `docker compose up --build -d` 후 WebSocket 연결 재테스트
 
 ### 관련 파일
 
