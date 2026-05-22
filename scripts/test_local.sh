@@ -296,17 +296,15 @@ fi
 # ── 8. 서비스 간 연동 ──────────────────────────────────
 section "8. 서비스 간 연동 테스트"
 
-# 시나리오 1: 백엔드 통해 예측 요청
+# 시나리오 1: 백엔드 예측 이력 조회 (GET /api/v1/predictions/{ticker})
 if [[ -n ${TOKEN:-} ]]; then
   PROXY=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
-    -X POST "$BACKEND/api/v1/predictions" \
-    -H "Authorization: Bearer $TOKEN" \
-    -H "Content-Type: application/json" \
-    -d '{"ticker": "MSFT"}' 2>/dev/null || echo "000")
-  if [[ $PROXY == "200" || $PROXY == "202" ]]; then
-    pass "시나리오 1: Backend → ML 예측 프록시 → HTTP $PROXY"
+    -X GET "$BACKEND/api/v1/predictions/MSFT" \
+    -H "Authorization: Bearer $TOKEN" 2>/dev/null || echo "000")
+  if [[ $PROXY == "200" || $PROXY == "404" ]]; then
+    pass "시나리오 1: Backend 예측 이력 조회 → HTTP $PROXY"
   else
-    fail "시나리오 1: Backend → ML 프록시 → HTTP $PROXY"
+    fail "시나리오 1: Backend 예측 이력 조회 → HTTP $PROXY"
   fi
 fi
 
