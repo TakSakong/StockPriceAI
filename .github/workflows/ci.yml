@@ -146,3 +146,24 @@ jobs:
 
       - name: Build frontend image
         run: docker build --target production -t frontend-prod ./frontend
+
+  # ── Integration tests (E2E via docker-compose) ────────────
+  integration:
+    name: Integration tests (docker-compose)
+    runs-on: ubuntu-latest
+    needs: [backend, ml, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start services
+        run: docker compose up -d --wait
+        timeout-minutes: 5
+
+      - name: Run integration tests (--skip-ml to save CI time)
+        run: bash scripts/test_local.sh --skip-ml
+        timeout-minutes: 10
+
+      - name: Stop services
+        if: always()
+        run: docker compose down

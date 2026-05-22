@@ -12,7 +12,7 @@ import traceback
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
-from typing import cast
+from typing import Any, Callable, cast
 
 import numpy as np
 import pandas as pd
@@ -77,21 +77,21 @@ SP500_TICKERS = list(dict.fromkeys(SP500_TICKERS))
 # ─────────────────────────────────────────────────────────────
 
 def _get_redis() -> redis.Redis:
-    return redis.from_url(settings.redis_url, decode_responses=True)
+    return redis.from_url(settings.redis_url, decode_responses=True)  # type: ignore[no-untyped-call, no-any-return]
 
 
-def load_cache(ticker: str) -> dict | None:
+def load_cache(ticker: str) -> dict[str, Any] | None:
     try:
         r = _get_redis()
         raw = cast("str | None", r.get(f"{CACHE_KEY_PREFIX}{ticker}"))
         if raw:
-            return json.loads(raw)
+            return cast(dict[str, Any], json.loads(raw))
     except Exception:
         pass
     return None
 
 
-def save_cache(ticker: str, data: dict, ttl_hours: int = CACHE_TTL_H) -> None:
+def save_cache(ticker: str, data: dict[str, Any], ttl_hours: int = CACHE_TTL_H) -> None:
     try:
         r = _get_redis()
         r.setex(
@@ -103,8 +103,8 @@ def save_cache(ticker: str, data: dict, ttl_hours: int = CACHE_TTL_H) -> None:
         pass
 
 
-def load_all_cache(tickers: list[str]) -> dict[str, dict]:
-    cache: dict[str, dict] = {}
+def load_all_cache(tickers: list[str]) -> dict[str, dict[str, Any]]:
+    cache: dict[str, dict[str, Any]] = {}
     try:
         r = _get_redis()
         pipe = r.pipeline()
@@ -122,7 +122,7 @@ def load_all_cache(tickers: list[str]) -> dict[str, dict]:
     return cache
 
 
-def save_all_cache(updates: dict[str, dict], ttl_hours: int = CACHE_TTL_H) -> None:
+def save_all_cache(updates: dict[str, dict[str, Any]], ttl_hours: int = CACHE_TTL_H) -> None:
     try:
         r = _get_redis()
         pipe = r.pipeline()
@@ -138,7 +138,7 @@ def save_all_cache(updates: dict[str, dict], ttl_hours: int = CACHE_TTL_H) -> No
         pass
 
 
-def is_cache_valid(entry: dict, ttl_hours: float = CACHE_TTL_H) -> bool:
+def is_cache_valid(entry: dict[str, Any], ttl_hours: float = CACHE_TTL_H) -> bool:
     try:
         t = datetime.fromisoformat(entry["cached_at"])
         return datetime.now() - t < timedelta(hours=ttl_hours)
@@ -156,14 +156,14 @@ def get_latest_close(ticker: str) -> float | None:
     return None
 
 
-def price_changed(entry: dict, threshold_pct: float = 2.0) -> bool:
+def price_changed(entry: dict[str, Any], threshold_pct: float = 2.0) -> bool:
     cached_price = entry.get("current_price")
     if cached_price is None:
         return True
     latest = get_latest_close(entry["ticker"])
     if latest is None:
         return False
-    return abs(latest - cached_price) / cached_price * 100 >= threshold_pct
+    return bool(abs(latest - cached_price) / cached_price * 100 >= threshold_pct)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -177,7 +177,7 @@ BLENDABLE = [
 ]
 
 
-def dp_blend(old: dict, new: dict, alpha: float = EWMA_ALPHA) -> dict:
+def dp_blend(old: dict[str, Any], new: dict[str, Any], alpha: float = EWMA_ALPHA) -> dict[str, Any]:
     out = new.copy()
     for field in BLENDABLE:
         if field in old and field in new:
@@ -194,7 +194,7 @@ def dp_blend(old: dict, new: dict, alpha: float = EWMA_ALPHA) -> dict:
 # 단일 종목 앙상블 분석
 # ─────────────────────────────────────────────────────────────
 
-def analyze_single_ticker(ticker: str, period_days: int = 400) -> dict | None:
+def analyze_single_ticker(ticker: str, period_days: int = 400) -> dict[str, Any] | None:
     """XGBoost + LSTM 전체 앙상블 분석."""
     t0 = time.time()
     try:
@@ -297,12 +297,12 @@ def analyze_single_ticker(ticker: str, period_days: int = 400) -> dict | None:
 
 def _process_one(
     ticker: str,
-    old: dict | None,
+    old: dict[str, Any] | None,
     force_refresh: bool,
     price_threshold_pct: float,
     period_days: int = 400,
-    progress_callback=None,
-) -> tuple[str, dict | None, str]:
+    progress_callback: Callable[..., None] | None = None,
+) -> tuple[str, dict[str, Any] | None, str]:
     if old and old.get("period_days", 400) != period_days:
         force_refresh = True
 
@@ -330,7 +330,7 @@ class ScanProgress:
         self.refreshed = 0
         self.failed = 0
         self.current_ticker = ""
-        self.live_results: list[dict] = []
+        self.live_results: list[dict[str, Any]] = []
         self.started_at = datetime.now()
 
     @property
@@ -348,7 +348,7 @@ class ScanProgress:
         rate = self.done / max(self.elapsed_sec, 0.001)
         return (self.total - self.done) / rate if rate > 0 else None
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "total": self.total,
             "done": self.done,
@@ -377,11 +377,11 @@ def run_sp500_scan(
     max_workers: int = 0,
     force_refresh: bool = False,
     price_threshold_pct: float = 2.0,
-    stop_flag: dict | None = None,
+    stop_flag: dict[str, Any] | None = None,
     progress: ScanProgress | None = None,
     period_days: int = 400,
-    progress_callback=None,
-) -> tuple[pd.DataFrame, dict]:
+    progress_callback: Callable[..., None] | None = None,
+) -> tuple[pd.DataFrame, dict[str, dict[str, Any]]]:
     """ThreadPoolExecutor 기반 배치 스캔 (Redis 캐시 사용)."""
     if max_workers <= 0:
         max_workers = PARALLEL["scanner_workers"]
@@ -401,7 +401,7 @@ def run_sp500_scan(
         f"캐시재사용={len(tickers)-need_analysis}, 신규분석={need_analysis}"
     )
 
-    pending_saves: dict[str, dict] = {}
+    pending_saves: dict[str, dict[str, Any]] = {}
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
@@ -481,7 +481,7 @@ def run_sp500_scan(
     return df, cache
 
 
-def get_cache_stats(tickers: list[str]) -> dict:
+def get_cache_stats(tickers: list[str]) -> dict[str, Any]:
     cache = load_all_cache(tickers)
     valid = stale = 0
     for t in tickers:

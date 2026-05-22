@@ -30,7 +30,7 @@ app.include_router(api_router, prefix="/api/v1")
 
 
 @app.get("/health", tags=["health"])
-async def health() -> dict:
+async def health() -> dict[str, str]:
     return {"status": "ok", "service": "ml"}
 
 
@@ -39,7 +39,7 @@ async def health() -> dict:
 # ─────────────────────────────────────────────────────────────
 
 @app.websocket("/ws/scanner/{job_id}")
-async def ws_scanner_progress(websocket: WebSocket, job_id: str):
+async def ws_scanner_progress(websocket: WebSocket, job_id: str) -> None:
     """
     스캔 진행률을 WebSocket으로 실시간 전송합니다.
 
