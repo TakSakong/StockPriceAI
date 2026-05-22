@@ -48,7 +48,7 @@ async def get_sentiment(
     ticker: str,
     max_news: int = Query(default=30, ge=5, le=100, description="최대 뉴스 수"),
     use_finbert: bool = Query(default=False, description="FinBERT 사용 (느리지만 정확)"),
-):
+) -> SentimentResponse:
     """
     종목 관련 뉴스를 수집하고 감성을 분석합니다.
 

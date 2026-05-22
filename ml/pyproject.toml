@@ -40,6 +40,7 @@ redis = "^5.0.6"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"
 pytest-asyncio = "^0.23.7"
+pytest-cov = "^5.0.0"
 ruff = "^0.4.8"
 mypy = "^1.10.0"
 types-requests = "^2.31.0"
@@ -53,7 +54,9 @@ select = ["E", "F", "I", "UP"]
 
 [tool.mypy]
 python_version = "3.11"
+strict = true
 ignore_missing_imports = true
+explicit_package_bases = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

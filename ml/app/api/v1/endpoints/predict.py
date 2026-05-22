@@ -30,7 +30,7 @@ class PredictResponse(BaseModel):
 
 
 @router.post("", response_model=PredictResponse, summary="단일 종목 ML 예측")
-async def predict(req: PredictRequest):
+async def predict(req: PredictRequest) -> PredictResponse:
     """
     종목의 다음날 상승/하락 확률을 XGBoost + LSTM 앙상블로 예측합니다.
 

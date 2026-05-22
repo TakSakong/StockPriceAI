@@ -67,7 +67,7 @@ fi
 pass "docker, curl 확인"
 
 # ── 3. 헬스체크 ───────────────────────────────────────
-section "3. 헬스체크"
+section "1. 헬스체크"
 
 # 백엔드 헬스
 resp=$(curl -s --max-time 10 "$BACKEND/health" 2>/dev/null || echo "{}")
@@ -130,7 +130,7 @@ else
 fi
 
 # ── 4. 백엔드 API ──────────────────────────────────────
-section "4. 백엔드 API 테스트"
+section "2. 백엔드 API 테스트"
 
 TEST_EMAIL="autotest_$(date +%s)@example.com"
 TEST_PASS="testpass123"
@@ -216,10 +216,10 @@ fi
 
 # ── 5. ML 서비스 테스트 ────────────────────────────────
 if [[ $SKIP_ML == true ]]; then
-  section "5. ML 서비스 테스트"
+  section "3. ML 서비스 테스트"
   skip "ML 서비스 테스트 전체 (--skip-ml)"
 else
-  section "5. ML 서비스 테스트"
+  section "3. ML 서비스 테스트"
 
   # 5-2. 기술적 지표
   TECH=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 "$ML/api/v1/technical/AAPL" 2>/dev/null || echo "000")
@@ -286,7 +286,7 @@ else
 fi
 
 # ── 6. WebSocket 테스트 ────────────────────────────────
-section "6. WebSocket 테스트"
+section "4. WebSocket 테스트"
 
 WS_SCRIPT="$(dirname "$0")/../scripts/test_ws.py"
 WS_VENV="/tmp/stockai-ws-venv"
@@ -318,7 +318,7 @@ else
 fi
 
 # ── 8. 서비스 간 연동 ──────────────────────────────────
-section "8. 서비스 간 연동 테스트"
+section "5. 서비스 간 연동 테스트"
 
 # 시나리오 1: 백엔드 예측 이력 조회 (GET /api/v1/predictions/{ticker})
 if [[ -n ${TOKEN:-} ]]; then

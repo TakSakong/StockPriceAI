@@ -8,6 +8,7 @@ import json
 import logging
 import warnings
 from datetime import datetime, timedelta
+from typing import Any
 
 import pandas as pd
 import redis
@@ -42,7 +43,7 @@ def fetch_stock_data(
     ticker: str,
     period_days: int = 365,
     force_refresh: bool = False,
-) -> tuple[pd.DataFrame | None, dict | None]:
+) -> tuple[pd.DataFrame | None, dict[str, Any] | None]:
     """
     주가 데이터 및 재무정보 수집
     1. ML 내부 Redis 캐시(settings.redis_url) 우선 확인
@@ -54,12 +55,12 @@ def fetch_stock_data(
     ticker = normalize_ticker(ticker)
     cache_key = f"fetcher:stock:{ticker}"
     r = None
-    info: dict = {}
+    info: dict[str, Any] = {}
 
     # 1. 내부 Redis 캐시에서 먼저 조회 시도 (force_refresh가 False일 때만)
     if not force_refresh:
         try:
-            r = redis.from_url(settings.redis_url, decode_responses=True)
+            r = redis.from_url(settings.redis_url, decode_responses=True)  # type: ignore[no-untyped-call]
             cached_data = r.get(cache_key)
             if cached_data:
                 data = json.loads(cached_data)
@@ -78,7 +79,7 @@ def fetch_stock_data(
     else:
         # force_refresh가 True이면 무조건 새로 수집하기 위해 r만 초기화
         try:
-            r = redis.from_url(settings.redis_url, decode_responses=True)
+            r = redis.from_url(settings.redis_url, decode_responses=True)  # type: ignore[no-untyped-call]
         except Exception:
             pass
 
@@ -219,9 +220,9 @@ def fetch_institutional_holders(ticker: str) -> pd.DataFrame | None:
     return None
 
 
-def get_market_context(ticker: str) -> dict:
+def get_market_context(ticker: str) -> dict[str, Any]:
     """시장 맥락 데이터 (벤치마크 대비 성과)"""
-    context: dict = {}
+    context: dict[str, Any] = {}
 
     norm_ticker = normalize_ticker(ticker)
     if ".KS" in norm_ticker or ".KQ" in norm_ticker:

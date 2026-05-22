@@ -7,7 +7,7 @@ Redis에 진행률 및 결과를 저장합니다.
 import json
 import logging
 from datetime import datetime
-from typing import cast
+from typing import Any, cast
 
 import redis
 
@@ -21,10 +21,10 @@ PROGRESS_TTL = 86400  # 24h
 
 
 def _get_redis() -> redis.Redis:
-    return redis.from_url(settings.redis_url, decode_responses=True)
+    return redis.from_url(settings.redis_url, decode_responses=True)  # type: ignore[no-untyped-call, no-any-return]
 
 
-def _save_progress(job_id: str, data: dict) -> None:
+def _save_progress(job_id: str, data: dict[str, Any]) -> None:
     try:
         r = _get_redis()
         r.setex(f"{PROGRESS_KEY_PREFIX}{job_id}", PROGRESS_TTL, json.dumps(data, default=str))
@@ -32,26 +32,26 @@ def _save_progress(job_id: str, data: dict) -> None:
         pass
 
 
-def get_scan_progress(job_id: str) -> dict | None:
+def get_scan_progress(job_id: str) -> dict[str, Any] | None:
     try:
         r = _get_redis()
         raw = cast("str | None", r.get(f"{PROGRESS_KEY_PREFIX}{job_id}"))
         if raw:
-            return json.loads(raw)
+            return cast(dict[str, Any], json.loads(raw))
     except Exception:
         pass
     return None
 
 
-@celery_app.task(bind=True, name="scan_tasks.run_scan_job", max_retries=0)
+@celery_app.task(bind=True, name="scan_tasks.run_scan_job", max_retries=0)  # type: ignore[untyped-decorator]
 def run_scan_job(
-    self,
+    self: Any,
     job_id: str,
     tickers: list[str],
     max_workers: int = 2,
     force_refresh: bool = False,
     period_days: int = 400,
-) -> dict:
+) -> dict[str, Any]:
     """
     S&P 500 배치 스캔 Celery 태스크.
 
@@ -83,7 +83,7 @@ def run_scan_job(
 
         progress = ScanProgress(total=len(tickers))
 
-        def on_progress(state: dict) -> None:
+        def on_progress(state: dict[str, Any]) -> None:
             _save_progress(
                 job_id,
                 {
@@ -175,7 +175,7 @@ def run_scan_job(
         raise
 
 
-@celery_app.task(name="scan_tasks.warmup_cache_task", ignore_result=True)
+@celery_app.task(name="scan_tasks.warmup_cache_task", ignore_result=True)  # type: ignore[untyped-decorator]
 def warmup_cache_task() -> str:
     """
     주기적으로 S&P 500 종목의 데이터를 수집하여 Redis 캐시를 최신화(웜업)합니다.
