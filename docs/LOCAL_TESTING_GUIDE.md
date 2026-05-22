@@ -315,7 +315,7 @@ brew install node && npm install -g wscat
 
 ```bash
 # 먼저 스캔을 시작하고 job_id를 얻은 후 연결
-wscat -c "ws://localhost:8001/ws/scanner/$SCAN_JOB_ID"
+wscat -c "ws://localhost/ws/scanner/$SCAN_JOB_ID"
 
 # 1초마다 진행 상황이 JSON으로 수신됩니다:
 # {"job_id": "...", "status": "running", "processed": 2, "total": 5, "result_count": 2, "top_results": [...]}
@@ -333,7 +333,7 @@ import websockets
 JOB_ID = "여기에_job_id_입력"
 
 async def watch():
-    uri = f"ws://localhost:8001/ws/scanner/{JOB_ID}"
+    uri = f"ws://localhost/ws/scanner/{JOB_ID}"
     async with websockets.connect(uri) as ws:
         async for msg in ws:
             data = json.loads(msg)
