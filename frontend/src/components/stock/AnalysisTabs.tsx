@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabPanel } from "@/components/ui/tabs";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, signalToBadgeVariant } from "@/components/ui/badge";
-import { FullPageSpinner } from "@/components/ui/spinner";
+import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { TechnicalIndicatorsChart } from "@/components/charts/TechnicalChart";
 import { technicalApi, sentimentApi, predictionsApi } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
@@ -53,7 +53,7 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
       {/* 개요 탭 */}
       <TabPanel id="overview" activeTab={activeTab}>
         {techLoading ? (
-          <FullPageSpinner />
+          <SkeletonLoader type="tab-content" />
         ) : technical ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -93,7 +93,7 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
       {/* 기술적 지표 탭 */}
       <TabPanel id="technical" activeTab={activeTab}>
         {techLoading ? (
-          <FullPageSpinner />
+          <SkeletonLoader type="card-grid" count={8} />
         ) : technical ? (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {Object.entries(technical.latest_indicators)
@@ -113,7 +113,7 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
       {/* 감성 분석 탭 */}
       <TabPanel id="sentiment" activeTab={activeTab}>
         {sentLoading ? (
-          <FullPageSpinner />
+          <SkeletonLoader type="tab-content" />
         ) : sentiment ? (
           <div className="space-y-6">
             {/* 상단 3개 핵심 요약 카드 */}
@@ -316,7 +316,7 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
             <p className="mt-1 text-sm text-[#718096]">로그인하시면 AI 분석과 예측 상승확률을 확인하실 수 있습니다.</p>
           </div>
         ) : predLoading ? (
-          <FullPageSpinner />
+          <SkeletonLoader type="card-grid" count={3} />
         ) : prediction ? (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -381,7 +381,7 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
       {/* 매매 신호 탭 */}
       <TabPanel id="signals" activeTab={activeTab}>
         {techLoading ? (
-          <FullPageSpinner />
+          <SkeletonLoader type="card-grid" count={4} />
         ) : technical ? (
           <div className="grid gap-3 sm:grid-cols-2">
             {Object.entries(technical.signals).map(([name, signal]) => (
@@ -404,7 +404,7 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
       {/* 지지/저항 탭 */}
       <TabPanel id="support" activeTab={activeTab}>
         {techLoading ? (
-          <FullPageSpinner />
+          <SkeletonLoader type="card-grid" count={4} />
         ) : technical ? (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {Object.entries(technical.support_resistance).map(([key, value]) => (
@@ -424,7 +424,7 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
       {/* 지표 상세 탭 */}
       <TabPanel id="indicators" activeTab={activeTab}>
         {techLoading ? (
-          <FullPageSpinner />
+          <SkeletonLoader type="table" count={10} />
         ) : technical ? (
           <Card className="overflow-x-auto">
             <CardHeader>

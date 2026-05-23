@@ -5,7 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
-import { FullPageSpinner } from "@/components/ui/spinner";
+import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { watchlistApi, stocksApi, predictionsApi } from "@/lib/api";
 import { Badge, signalToBadgeVariant } from "@/components/ui/badge";
 import type { WatchlistItemOut } from "@/types/api";
@@ -41,14 +41,14 @@ function WatchlistRow({ item, onRemove }: { item: WatchlistItemOut; onRemove: (t
           </Badge>
         ) : "—"}
       </td>
-      <td className="px-4 py-3 text-right text-[#718096]">
+      <td className="px-4 py-3 text-right text-[#718096] hidden sm:table-cell">
         {prediction ? `${(prediction.up_prob * 100).toFixed(1)}%` : "—"}
       </td>
-      <td className="px-4 py-3 text-[#718096] text-sm">{item.memo ?? ""}</td>
+      <td className="px-4 py-3 text-[#718096] text-sm hidden md:table-cell">{item.memo ?? ""}</td>
       <td className="px-4 py-3">
         <button
           onClick={() => onRemove(item.ticker)}
-          className="text-xs text-red-400 hover:text-red-300 transition-colors"
+          className="text-xs text-red-400 hover:text-red-300 transition-all hover-spring px-2 py-1 rounded hover:bg-red-500/10 active:scale-95"
         >
           삭제
         </button>
@@ -82,7 +82,7 @@ export function WatchlistTable() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["watchlist"] }),
   });
 
-  if (isLoading) return <FullPageSpinner />;
+  if (isLoading) return <SkeletonLoader type="table" count={5} />;
 
   return (
     <div className="space-y-4">
@@ -134,8 +134,8 @@ export function WatchlistTable() {
                 <th className="px-4 py-3 text-left text-[#718096]">종목명</th>
                 <th className="px-4 py-3 text-right text-[#718096]">현재가</th>
                 <th className="px-4 py-3 text-right text-[#718096]">신호</th>
-                <th className="px-4 py-3 text-right text-[#718096]">상승 확률</th>
-                <th className="px-4 py-3 text-left text-[#718096]">메모</th>
+                <th className="px-4 py-3 text-right text-[#718096] hidden sm:table-cell">상승 확률</th>
+                <th className="px-4 py-3 text-left text-[#718096] hidden md:table-cell">메모</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>

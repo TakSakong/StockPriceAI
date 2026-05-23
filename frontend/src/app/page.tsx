@@ -10,6 +10,7 @@ import { AuthModal } from "@/components/layout/AuthModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FullPageSpinner } from "@/components/ui/spinner";
+import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { CandlestickChart } from "@/components/charts/CandlestickChart";
 import { stocksApi, predictionsApi } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
@@ -183,57 +184,73 @@ function DashboardContent() {
 
       {/* 분석 결과 */}
       {selectedTicker && !stockError && (
-        <>
-          {/* 종목 헤더 */}
-          <div className="flex items-baseline gap-3">
-            <h2 className="text-xl font-bold text-[#e2e8f0]">{selectedTicker}</h2>
-            {stockInfo?.name && (
-              <span className="text-[#718096]">{stockInfo.name}</span>
-            )}
-          </div>
-
-          {/* 캔들스틱 가격 차트 */}
-          {stockInfo && chartData && (
-            <Card className="p-4 bg-[#1a202c]/20 border-[#2d3748]/40 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
-              {/* 차트 상단 컨트롤 헤더 */}
-              <div className="flex items-center justify-between gap-4 mb-3">
-                <span className="text-xs font-semibold text-[#a0aec0] uppercase tracking-wider">주가 차트 분석</span>
-                <div className="flex gap-1 p-0.5 bg-[#1e293b]/70 rounded-lg border border-[#2d3748]/50">
-                  {(["1M", "3M", "1Y", "5Y", "ALL"] as const).map((opt) => (
-                    <button
-                      key={opt}
-                      onClick={() => setRange(opt)}
-                      className={`px-3 py-1 text-xs font-bold rounded-md transition-all duration-200 cursor-pointer ${
-                        range === opt
-                          ? "bg-blue-600 text-white shadow-md scale-[1.03]"
-                          : "text-[#718096] hover:text-[#e2e8f0] hover:bg-[#2d3748]/30"
-                      }`}
-                    >
-                      {opt === "ALL" ? "전체" : opt}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <CandlestickChart
-                data={chartData}
-                ticker={selectedTicker}
-              />
-            </Card>
-          )}
-
-          {/* 개요 카드 */}
-          {stockInfo && (
-            <StockOverview stockInfo={stockInfo} prediction={prediction} />
-          )}
-
-          {/* 분석 탭 (7탭) */}
-          <Card className="p-0 overflow-hidden">
-            <div className="p-4">
-              <AnalysisTabs ticker={selectedTicker} />
+        stockLoading ? (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            {/* Header Skeleton */}
+            <div className="flex items-baseline gap-3">
+              <div className="h-7 w-20 rounded animate-skeleton" />
+              <div className="h-4 w-32 rounded animate-skeleton" />
             </div>
-          </Card>
-        </>
+            {/* Chart Skeleton */}
+            <SkeletonLoader type="chart" />
+            {/* Overview Cards Mock */}
+            <SkeletonLoader type="card-grid" count={4} />
+            {/* Tab content mock */}
+            <SkeletonLoader type="tab-content" />
+          </div>
+        ) : (
+          <>
+            {/* 종목 헤더 */}
+            <div className="flex items-baseline gap-3">
+              <h2 className="text-xl font-bold text-[#e2e8f0]">{selectedTicker}</h2>
+              {stockInfo?.name && (
+                <span className="text-[#718096]">{stockInfo.name}</span>
+              )}
+            </div>
+
+            {/* 캔들스틱 가격 차트 */}
+            {stockInfo && chartData && (
+              <Card className="p-4 bg-[#1a202c]/20 border-[#2d3748]/40 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
+                {/* 차트 상단 컨트롤 헤더 */}
+                <div className="flex items-center justify-between gap-4 mb-3">
+                  <span className="text-xs font-semibold text-[#a0aec0] uppercase tracking-wider">주가 차트 분석</span>
+                  <div className="flex gap-1 p-0.5 bg-[#1e293b]/70 rounded-lg border border-[#2d3748]/50">
+                    {(["1M", "3M", "1Y", "5Y", "ALL"] as const).map((opt) => (
+                      <button
+                        key={opt}
+                        onClick={() => setRange(opt)}
+                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all duration-200 cursor-pointer ${
+                          range === opt
+                            ? "bg-blue-600 text-white shadow-md scale-[1.03]"
+                            : "text-[#718096] hover:text-[#e2e8f0] hover:bg-[#2d3748]/30"
+                        }`}
+                      >
+                        {opt === "ALL" ? "전체" : opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <CandlestickChart
+                  data={chartData}
+                  ticker={selectedTicker}
+                />
+              </Card>
+            )}
+
+            {/* 개요 카드 */}
+            {stockInfo && (
+              <StockOverview stockInfo={stockInfo} prediction={prediction} />
+            )}
+
+            {/* 분석 탭 (7탭) */}
+            <Card className="p-0 overflow-hidden">
+              <div className="p-4">
+                <AnalysisTabs ticker={selectedTicker} />
+              </div>
+            </Card>
+          </>
+        )
       )}
 
       {/* 빈 상태 */}
