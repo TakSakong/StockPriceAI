@@ -32,7 +32,7 @@ class TechnicalResponse(BaseModel):
 async def get_technical(
     ticker: str,
     period_days: int = Query(default=365, ge=60, le=3000, description="조회 기간(일)"),
-):
+) -> TechnicalResponse:
     """
     주어진 종목의 기술적 지표와 매매 신호를 반환합니다.
 

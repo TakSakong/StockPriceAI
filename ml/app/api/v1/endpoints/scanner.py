@@ -8,12 +8,13 @@ GET  /api/v1/scanner/cache/stats — 캐시 통계
 
 import logging
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from ....pipelines.scanner import SP500_TICKERS, get_cache_stats
-from ....workers.scan_tasks import get_scan_progress, run_scan_job
+from ....workers.scan_tasks import _save_progress, get_scan_progress, run_scan_job
 
 router = APIRouter()
 log = logging.getLogger("stockai.api.scanner")
@@ -47,12 +48,12 @@ class ScanStatusResponse(BaseModel):
     current_ticker: str
     elapsed_sec: float | None = None
     eta_sec: float | None = None
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
     error: str | None = None
 
 
 @router.post("/start", response_model=ScanStartResponse, summary="배치 스캔 시작")
-async def start_scan(req: ScanStartRequest):
+async def start_scan(req: ScanStartRequest) -> ScanStartResponse:
     """
     S&P 500 (또는 지정된 종목) 배치 스캔을 Celery 비동기 작업으로 시작합니다.
 
@@ -68,6 +69,22 @@ async def start_scan(req: ScanStartRequest):
     tickers = [t.strip().upper() for t in tickers]
 
     job_id = str(uuid.uuid4())
+
+    # apply_async 전에 초기 상태 저장 — worker가 태스크를 처리하기 전 status 조회 시 404 방지
+    _save_progress(
+        job_id,
+        {
+            "job_id": job_id,
+            "status": "queued",
+            "total": len(tickers),
+            "done": 0,
+            "pct": 0.0,
+            "cached": 0,
+            "refreshed": 0,
+            "failed": 0,
+            "current_ticker": "",
+        },
+    )
 
     try:
         run_scan_job.apply_async(
@@ -93,7 +110,7 @@ async def start_scan(req: ScanStartRequest):
 
 
 @router.get("/status/{job_id}", response_model=ScanStatusResponse, summary="스캔 진행률 조회")
-async def get_scan_status(job_id: str):
+async def get_scan_status(job_id: str) -> ScanStatusResponse:
     """
     스캔 작업의 현재 진행 상태를 반환합니다.
 
@@ -122,7 +139,7 @@ async def get_scan_status(job_id: str):
 
 
 @router.get("/tickers", response_model=list[str], summary="S&P 500 종목 목록")
-async def list_tickers():
+async def list_tickers() -> list[str]:
     """스캐너에서 사용하는 S&P 500 종목 코드 목록을 반환합니다."""
     return SP500_TICKERS
 
@@ -130,7 +147,7 @@ async def list_tickers():
 @router.get("/cache/stats", summary="캐시 통계")
 async def cache_stats(
     limit: int = Query(default=50, ge=1, le=500, description="확인할 종목 수"),
-):
+) -> dict[str, Any]:
     """Redis에 캐싱된 스캔 결과 통계를 반환합니다."""
     tickers = SP500_TICKERS[:limit]
     try:
