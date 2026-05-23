@@ -1,6 +1,7 @@
 """GET /api/v1/technical/{ticker} — 기술적 지표"""
 
 import logging
+from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
@@ -24,13 +25,14 @@ class TechnicalResponse(BaseModel):
     latest_indicators: dict[str, float | None]
     ma_trend: str
     overall_signal: str
+    info: dict[str, Any] = {}
 
 
 @router.get("/{ticker}", response_model=TechnicalResponse, summary="기술적 지표 조회")
 async def get_technical(
     ticker: str,
     period_days: int = Query(default=365, ge=60, le=3000, description="조회 기간(일)"),
-):
+) -> TechnicalResponse:
     """
     주어진 종목의 기술적 지표와 매매 신호를 반환합니다.
 
@@ -38,15 +40,15 @@ async def get_technical(
     - 지지/저항 레벨
     """
     try:
-        from ....services.fetcher import fetch_stock_data
-        from ....services.technical import (
+        from ....pipelines.fetcher import fetch_stock_data
+        from ....pipelines.technical import (
             add_all_indicators,
             get_current_signals,
             get_support_resistance,
         )
 
         ticker = ticker.strip().upper()
-        df, _ = fetch_stock_data(ticker, period_days=period_days)
+        df, info = fetch_stock_data(ticker, period_days=period_days)
         if df is None:
             raise HTTPException(status_code=404, detail=f"데이터 없음: {ticker}")
 
@@ -121,6 +123,14 @@ async def get_technical(
             },
             ma_trend=ma_trend,
             overall_signal=overall,
+            info={
+                "sector": info.get("sector") if info else None,
+                "industry": info.get("industry") if info else None,
+                "marketCap": info.get("marketCap") if info else None,
+                "longName": info.get("longName") if info else None,
+                "shortName": info.get("shortName") if info else None,
+                "currency": info.get("currency") if info else None,
+            },
         )
 
     except HTTPException:

@@ -1,14 +1,12 @@
 import uuid
 
-import httpx
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
 from app.core.database import get_db
-from app.models.scan import ScanJob, ScanResult
 from app.models.user import User
 from app.schemas.scanner import ScanJobCreate, ScanJobOut, ScanResultOut
+from app.services import scanner as scanner_service
 from app.services.auth import get_current_user
 
 router = APIRouter(prefix="/scanner", tags=["Scanner"])
@@ -20,57 +18,45 @@ async def create_scan_job(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ScanJobOut:
-    job = ScanJob(
+    """새로운 섹터 스캔 작업을 생성하고 ML 서비스에 요청을 보냅니다.
+
+    데이터베이스에 스캔 작업(pending 상태)을 기록한 후, ML 서비스의 API를 호출하여 비동기 스캔을 시작합니다.
+    """
+    return await scanner_service.create_scan_job(
         user_id=current_user.id,
         sector=payload.sector,
-        status="pending",
+        db=db,
     )
-    db.add(job)
-    db.commit()
-    db.refresh(job)
-
-    # ML 서비스에 비동기 스캔 요청
-    async with httpx.AsyncClient(timeout=5.0) as client:
-        try:
-            await client.post(
-                f"{settings.ML_SERVICE_URL}/api/v1/scanner/start",
-                json={"job_id": str(job.id), "sector": payload.sector},
-            )
-        except httpx.RequestError:
-            job.status = "failed"
-            db.commit()
-            raise HTTPException(
-                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="ML service unavailable",
-            )
-
-    return ScanJobOut.model_validate(job)
 
 
 @router.get("/jobs/{job_id}", response_model=ScanJobOut, summary="스캔 작업 상태 조회")
-def get_scan_job(
+async def get_scan_job(
     job_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> ScanJobOut:
-    job = db.query(ScanJob).filter(ScanJob.id == job_id, ScanJob.user_id == current_user.id).first()
-    if not job:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan job not found")
-    return ScanJobOut.model_validate(job)
+    """특정 스캔 작업의 현재 상태(pending, processing, completed, failed)를 조회합니다.
+    """
+    return await scanner_service.get_scan_job(
+        job_id=job_id,
+        user_id=current_user.id,
+        db=db,
+    )
 
 
 @router.get("/jobs/{job_id}/results", response_model=list[ScanResultOut], summary="스캔 결과 조회")
-def get_scan_results(
+async def get_scan_results(
     job_id: uuid.UUID,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[ScanResultOut]:
-    job = db.query(ScanJob).filter(ScanJob.id == job_id, ScanJob.user_id == current_user.id).first()
-    if not job:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Scan job not found")
-
-    results = db.query(ScanResult).filter(ScanResult.job_id == job_id).all()
-    return [ScanResultOut.model_validate(r) for r in results]
+    """완료된 스캔 작업의 상세 결과 리스트를 조회합니다.
+    """
+    return await scanner_service.get_scan_results(
+        job_id=job_id,
+        user_id=current_user.id,
+        db=db,
+    )
 
 
 @router.get("/jobs", response_model=list[ScanJobOut], summary="내 스캔 작업 목록")
@@ -78,11 +64,9 @@ def list_scan_jobs(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[ScanJobOut]:
-    jobs = (
-        db.query(ScanJob)
-        .filter(ScanJob.user_id == current_user.id)
-        .order_by(ScanJob.created_at.desc())
-        .limit(20)
-        .all()
+    """현재 사용자가 요청한 최근 스캔 작업 목록(최대 20개)을 조회합니다.
+    """
+    return scanner_service.list_scan_jobs(
+        user_id=current_user.id,
+        db=db,
     )
-    return [ScanJobOut.model_validate(j) for j in jobs]

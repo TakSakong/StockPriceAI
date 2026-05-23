@@ -15,6 +15,8 @@ import re
 import warnings
 import xml.etree.ElementTree as ET
 from datetime import datetime
+from typing import Any
+from urllib.parse import quote
 
 import numpy as np
 import pandas as pd
@@ -49,7 +51,7 @@ def _parse_rss_date(date_str: str) -> datetime:
     return datetime.now()
 
 
-def _parse_yf_news_item(item: dict) -> dict | None:
+def _parse_yf_news_item(item: dict[str, Any]) -> dict[str, Any] | None:
     try:
         title = publisher = link = ""
         pub_dt = datetime.now()
@@ -97,7 +99,7 @@ def _parse_yf_news_item(item: dict) -> dict | None:
         return None
 
 
-def _fetch_yfinance_news(ticker: str, max_news: int = 30) -> list[dict]:
+def _fetch_yfinance_news(ticker: str, max_news: int = 30) -> list[dict[str, Any]]:
     news_list = []
     try:
         import yfinance as yf
@@ -113,7 +115,7 @@ def _fetch_yfinance_news(ticker: str, max_news: int = 30) -> list[dict]:
     return news_list
 
 
-def _fetch_yahoo_rss(ticker: str, max_news: int = 20) -> list[dict]:
+def _fetch_yahoo_rss(ticker: str, max_news: int = 20) -> list[dict[str, Any]]:
     url = f"https://feeds.finance.yahoo.com/rss/2.0/headline?s={ticker}&region=US&lang=en-US"
     news_list = []
     try:
@@ -152,9 +154,9 @@ def _fetch_yahoo_rss(ticker: str, max_news: int = 20) -> list[dict]:
 
 def _fetch_google_news_rss(
     ticker: str, company_name: str = "", max_news: int = 15
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     query = company_name if company_name else ticker
-    query_enc = requests.utils.quote(f"{query} stock")
+    query_enc = quote(f"{query} stock")
     url = f"https://news.google.com/rss/search?q={query_enc}&hl=en-US&gl=US&ceid=US:en"
     news_list = []
     try:
@@ -168,7 +170,9 @@ def _fetch_google_news_rss(
                 pub_str = (item.findtext("pubDate") or "").strip()
                 link = (item.findtext("link") or "").strip()
                 source_el = item.find("source")
-                publisher = source_el.text.strip() if source_el is not None else "Google News"
+                publisher = (
+                    (source_el.text or "").strip() if source_el is not None else "Google News"
+                )
                 if not title:
                     continue
                 if " - " in title:
@@ -196,10 +200,10 @@ def _fetch_google_news_rss(
     return news_list
 
 
-def fetch_news(ticker: str, company_name: str = "", max_news: int = 30) -> list[dict]:
+def fetch_news(ticker: str, company_name: str = "", max_news: int = 30) -> list[dict[str, Any]]:
     """yfinance → Yahoo RSS → Google RSS 순서로 뉴스 수집."""
-    all_news: list[dict] = []
-    seen_titles: set = set()
+    all_news: list[dict[str, Any]] = []
+    seen_titles: set[str] = set()
 
     for source_fn, args in [
         (_fetch_yfinance_news, (ticker, max_news)),
@@ -209,7 +213,7 @@ def fetch_news(ticker: str, company_name: str = "", max_news: int = 30) -> list[
         if len(all_news) >= max_news:
             break
         try:
-            batch = source_fn(*args)
+            batch = source_fn(*args)  # type: ignore[operator]
             for item in batch:
                 norm = re.sub(r"\s+", " ", item["title"].lower().strip())
                 key = norm[:60]
@@ -259,7 +263,7 @@ class _KeywordFallback:
         "warning", "fear", "sell", "low", "slump", "layoff", "fraud", "recall", "tariff",
     }
 
-    def polarity_scores(self, text: str) -> dict:
+    def polarity_scores(self, text: str) -> dict[str, Any]:
         words = set(re.findall(r"\b\w+\b", text.lower()))
         pos = len(words & self._POS)
         neg = len(words & self._NEG)
@@ -268,7 +272,7 @@ class _KeywordFallback:
         return {"compound": compound, "pos": pos / total, "neg": neg / total, "neu": 0.5}
 
 
-def _get_vader():
+def _get_vader() -> Any:
     global _vader_analyzer
     if _vader_analyzer is None:
         try:
@@ -281,7 +285,7 @@ def _get_vader():
     return _vader_analyzer
 
 
-def _scores_to_label(compound: float) -> tuple:
+def _scores_to_label(compound: float) -> tuple[str, str]:
     if compound >= 0.05:
         return "POSITIVE", "POSITIVE"
     if compound <= -0.05:
@@ -289,7 +293,7 @@ def _scores_to_label(compound: float) -> tuple:
     return "NEUTRAL", "NEUTRAL"
 
 
-def analyze_sentiment_vader(text: str) -> dict:
+def analyze_sentiment_vader(text: str) -> dict[str, Any]:
     scores = _get_vader().polarity_scores(text)
     compound = scores["compound"]
     label, _ = _scores_to_label(compound)
@@ -318,7 +322,7 @@ def _finbert_available() -> bool:
     return bool(_finbert_ok)
 
 
-def _get_finbert():
+def _get_finbert() -> Any:
     global _finbert_pipeline
     if _finbert_pipeline is None and _finbert_available():
         try:
@@ -336,7 +340,7 @@ def _get_finbert():
     return _finbert_pipeline
 
 
-def analyze_sentiment_finbert(text: str) -> dict:
+def analyze_sentiment_finbert(text: str) -> dict[str, Any]:
     pipe = _get_finbert()
     if pipe is None:
         return analyze_sentiment_vader(text)
@@ -431,7 +435,7 @@ _MACRO_THEME_TRIGGERS: dict[str, list[str]] = {
 }
 
 
-def classify_news_type(title: str) -> dict:
+def classify_news_type(title: str) -> dict[str, Any]:
     t = title.lower()
     pos_hits = sum(1 for kw in _SURPRISE_POSITIVE if kw in t)
     neg_hits = sum(1 for kw in _SURPRISE_NEGATIVE if kw in t)
@@ -491,7 +495,7 @@ def compute_impact_score(
     beta: float = 1.0,
     market_regime: float = 1.2,
     macro_exposure: float = 0.0,
-) -> dict:
+) -> dict[str, Any]:
     surprise_bonus = {
         "surprise_positive": +0.25,
         "surprise_negative": -0.25,
@@ -568,7 +572,7 @@ def compute_relevance(
     company_name: str = "",
     sector: str = "",
     beta: float = 1.0,
-) -> dict:
+) -> dict[str, Any]:
     t = title.lower()
 
     ntype_info = classify_news_type(title)
@@ -583,7 +587,7 @@ def compute_relevance(
 
     market_regime = detect_market_regime(title)
 
-    aliases: set = set()
+    aliases: set[str] = set()
     aliases.add(ticker.replace(".KS", "").replace(".KQ", "").upper())
     if company_name:
         aliases.add(company_name)
@@ -682,7 +686,7 @@ def analyze_news_sentiment(
     max_news: int = 30,
     min_relevance: float = 0.08,
     beta: float = 1.0,
-) -> tuple[pd.DataFrame, dict]:
+) -> tuple[pd.DataFrame, dict[str, Any]]:
     """뉴스 수집 → 분류 → Impact Score → 가중 감성 점수"""
     _empty = {
         "avg_sentiment": 0.0,

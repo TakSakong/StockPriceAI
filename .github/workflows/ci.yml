@@ -6,10 +6,15 @@ on:
   push:
     branches: [develop]
 
+# 같은 브랜치/PR에서 새 커밋이 오면 이전 실행을 취소
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   # ── Backend ────────────────────────────────────────────────
   backend:
-    name: Backend (ruff + pytest)
+    name: Backend (ruff + mypy + pytest)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,7 +28,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Poetry
-        run: pip install poetry==1.8.3
+        run: pip install poetry==2.4.1
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
@@ -38,14 +43,21 @@ jobs:
         run: poetry run ruff check app
 
       - name: Type check (mypy)
-        run: poetry run mypy app || true   # 초기 단계에서는 경고만
+        run: poetry run mypy app
 
       - name: Test (pytest)
-        run: poetry run pytest tests/ -v --tb=short || true
+        run: poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml --cov-fail-under=70
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
 
   # ── ML Service ─────────────────────────────────────────────
   ml:
-    name: ML Service (ruff + pytest)
+    name: ML Service (ruff + mypy + pytest)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -59,7 +71,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install Poetry
-        run: pip install poetry==1.8.3
+        run: pip install poetry==2.4.1
 
       - name: Cache Poetry virtualenv
         uses: actions/cache@v4
@@ -73,8 +85,18 @@ jobs:
       - name: Lint (ruff)
         run: poetry run ruff check app
 
+      - name: Type check (mypy)
+        run: poetry run mypy app
+
       - name: Test (pytest)
-        run: poetry run pytest tests/ -v --tb=short || true
+        run: poetry run pytest tests/ -v --tb=short --cov=app --cov-report=xml --cov-fail-under=70
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ml-coverage
+          path: ml/coverage.xml
 
   # ── Frontend ───────────────────────────────────────────────
   frontend:
@@ -97,10 +119,51 @@ jobs:
         run: npm ci
 
       - name: Type check
-        run: npm run type-check || true
+        run: npm run type-check
 
       - name: Lint
-        run: npm run lint || true
+        run: npm run lint
+
+      - name: Test (vitest)
+        run: npm run test
 
       - name: Build
-        run: npm run build || true
+        run: npm run build
+
+  # ── Docker build smoke test ────────────────────────────────
+  docker:
+    name: Docker builds (production targets)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build --target production -t backend-prod ./backend
+
+      - name: Build ml image
+        run: docker build --target production -t ml-prod ./ml
+
+      - name: Build frontend image
+        run: docker build --target production -t frontend-prod ./frontend
+
+  # ── Integration tests (E2E via docker-compose) ────────────
+  integration:
+    name: Integration tests (docker-compose)
+    runs-on: ubuntu-latest
+    needs: [backend, ml, frontend]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start services
+        run: docker compose up -d --wait
+        timeout-minutes: 5
+
+      - name: Run integration tests (--skip-ml to save CI time)
+        run: bash scripts/test_local.sh --skip-ml
+        timeout-minutes: 10
+
+      - name: Stop services
+        if: always()
+        run: docker compose down

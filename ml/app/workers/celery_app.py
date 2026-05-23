@@ -17,4 +17,10 @@ celery_app.conf.update(
     result_expires=settings.celery_result_expires,
     worker_prefetch_multiplier=1,
     task_acks_late=True,
+    beat_schedule={
+        "warmup-sp500-cache-every-hour": {
+            "task": "scan_tasks.warmup_cache_task",
+            "schedule": 3600.0,  # 1 hour
+        },
+    },
 )

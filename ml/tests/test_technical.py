@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from app.services.technical import (
+from app.pipelines.technical import (
     add_all_indicators,
     calculate_ema,
     calculate_macd,

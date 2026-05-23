@@ -3,6 +3,8 @@ Hybrid Indicator Engineering Module
 """
 
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
@@ -78,7 +80,7 @@ def add_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
             df[col] = df[col].astype("float32")
 
     close = df["Close"]
-    new_cols: dict = {}
+    new_cols: dict[str, Any] = {}
 
     ma5 = calculate_sma(close, 5).astype("float32")
     ma10 = calculate_sma(close, 10).astype("float32")
@@ -191,7 +193,7 @@ def add_all_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def get_current_signals(df: pd.DataFrame) -> dict:
+def get_current_signals(df: pd.DataFrame) -> dict[str, Any]:
     latest = df.iloc[-1]
     prev = df.iloc[-2] if len(df) >= 2 else latest
     signals = {}
@@ -254,7 +256,7 @@ def get_current_signals(df: pd.DataFrame) -> dict:
     return signals
 
 
-def get_support_resistance(df: pd.DataFrame, window: int = 20) -> dict:
+def get_support_resistance(df: pd.DataFrame, window: int = 20) -> dict[str, Any]:
     close = df["Close"]
     current = float(close.iloc[-1])
     recent = df.tail(window)

@@ -1,3 +1,6 @@
+import os
+from typing import Any
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
@@ -10,6 +13,7 @@ app = FastAPI(
     version="0.1.0",
     docs_url="/docs",
     redoc_url="/redoc",
+    root_path=os.getenv("PROXY_ROOT_PATH", ""),
 )
 
 app.add_middleware(
@@ -25,13 +29,14 @@ app.include_router(ws_router)
 
 
 @app.get("/health", tags=["Health"])
+@app.get("/api/health", include_in_schema=False)
 async def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
-def custom_openapi() -> dict:
+def custom_openapi() -> dict[str, Any]:
     if app.openapi_schema:
-        return app.openapi_schema  # type: ignore[return-value]
+        return app.openapi_schema
 
     schema = get_openapi(
         title=app.title,
@@ -40,16 +45,12 @@ def custom_openapi() -> dict:
     )
     # Swagger UI Bearer Token 인증 스키마 등록
     schema["components"]["securitySchemes"] = {
-        "BearerAuth": {
+        "HTTPBearer": {
             "type": "http",
             "scheme": "bearer",
             "bearerFormat": "JWT",
         }
     }
-    for path in schema.get("paths", {}).values():
-        for operation in path.values():
-            if isinstance(operation, dict):
-                operation.setdefault("security", [{"BearerAuth": []}])
 
     app.openapi_schema = schema
     return schema

@@ -34,7 +34,7 @@ class ScanResult(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     job_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("scan_jobs.id"), nullable=False
+        UUID(as_uuid=True), ForeignKey("scan_jobs.id"), nullable=False, index=True
     )
     ticker: Mapped[str] = mapped_column(String(20), nullable=False)
     composite_score: Mapped[float | None] = mapped_column(Float, nullable=True)
