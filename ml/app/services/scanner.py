@@ -12,7 +12,7 @@ import traceback
 import warnings
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
-from typing import cast, Any, Callable
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
