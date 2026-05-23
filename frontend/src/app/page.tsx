@@ -8,7 +8,7 @@ import { AnalysisTabs } from "@/components/stock/AnalysisTabs";
 import { AuthModal } from "@/components/layout/AuthModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { stocksApi, mlPredictApi } from "@/lib/api";
+import { stocksApi, predictionsApi } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
 import { useAuthStore } from "@/store/auth";
 
@@ -23,11 +23,13 @@ export default function DashboardPage() {
     enabled: !!selectedTicker,
   });
 
-  const { data: prediction } = useQuery({
-    queryKey: ["predict-overview", selectedTicker],
-    queryFn: () => mlPredictApi.predict({ ticker: selectedTicker }),
-    enabled: !!selectedTicker,
+  const { data: predictions } = useQuery({
+    queryKey: ["predictions-history", selectedTicker],
+    queryFn: () => predictionsApi.get(selectedTicker),
+    enabled: !!selectedTicker && isAuthenticated,
   });
+
+  const prediction = predictions && predictions.length > 0 ? predictions[0] : undefined;
 
   function handleSearch(ticker: string) {
     setSelectedTicker(ticker);

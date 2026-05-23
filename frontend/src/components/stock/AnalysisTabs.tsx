@@ -6,8 +6,9 @@ import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge, signalToBadgeVariant } from "@/components/ui/badge";
 import { FullPageSpinner } from "@/components/ui/spinner";
 import { TechnicalIndicatorsChart } from "@/components/charts/TechnicalChart";
-import { technicalApi, sentimentApi, mlPredictApi } from "@/lib/api";
+import { technicalApi, sentimentApi, predictionsApi } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
+import { useAuthStore } from "@/store/auth";
 
 const TABS = [
   { id: "overview", label: "개요" },
@@ -25,6 +26,7 @@ interface AnalysisTabsProps {
 
 export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
   const { activeTab, setActiveTab } = useUIStore();
+  const { isAuthenticated } = useAuthStore();
 
   const { data: technical, isLoading: techLoading } = useQuery({
     queryKey: ["technical", ticker],
@@ -38,11 +40,13 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
     enabled: !!ticker && activeTab === "sentiment",
   });
 
-  const { data: prediction, isLoading: predLoading } = useQuery({
-    queryKey: ["predict", ticker],
-    queryFn: () => mlPredictApi.predict({ ticker }),
-    enabled: !!ticker && activeTab === "prediction",
+  const { data: predictions, isLoading: predLoading } = useQuery({
+    queryKey: ["predictions-history", ticker],
+    queryFn: () => predictionsApi.get(ticker),
+    enabled: !!ticker && activeTab === "prediction" && isAuthenticated,
   });
+
+  const prediction = predictions && predictions.length > 0 ? predictions[0] : undefined;
 
   return (
     <Tabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab}>
@@ -167,7 +171,13 @@ export function AnalysisTabs({ ticker }: AnalysisTabsProps) {
 
       {/* AI 예측 탭 */}
       <TabPanel id="prediction" activeTab={activeTab}>
-        {predLoading ? (
+        {!isAuthenticated ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-[#2d3748] rounded-lg p-6 bg-[#1a202c]/30">
+            <div className="text-4xl mb-3">🔒</div>
+            <h3 className="text-md font-medium text-[#e2e8f0]">AI 예측은 회원 전용 기능입니다</h3>
+            <p className="mt-1 text-sm text-[#718096]">로그인하시면 AI 분석과 예측 상승확률을 확인하실 수 있습니다.</p>
+          </div>
+        ) : predLoading ? (
           <FullPageSpinner />
         ) : prediction ? (
           <div className="space-y-4">

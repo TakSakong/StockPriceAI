@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { FullPageSpinner } from "@/components/ui/spinner";
-import { watchlistApi, stocksApi, mlPredictApi } from "@/lib/api";
+import { watchlistApi, stocksApi, predictionsApi } from "@/lib/api";
 import { Badge, signalToBadgeVariant } from "@/components/ui/badge";
 import type { WatchlistItemOut } from "@/types/api";
 
@@ -16,10 +16,12 @@ function WatchlistRow({ item, onRemove }: { item: WatchlistItemOut; onRemove: (t
     queryFn: () => stocksApi.get(item.ticker),
   });
 
-  const { data: prediction } = useQuery({
-    queryKey: ["predict-overview", item.ticker],
-    queryFn: () => mlPredictApi.predict({ ticker: item.ticker }),
+  const { data: predictions } = useQuery({
+    queryKey: ["predictions-history", item.ticker],
+    queryFn: () => predictionsApi.get(item.ticker),
   });
+
+  const prediction = predictions && predictions.length > 0 ? predictions[0] : undefined;
 
   return (
     <tr className="border-b border-[#2d3748]/50 hover:bg-[#2d3748]/30 transition-colors">
