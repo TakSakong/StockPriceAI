@@ -29,6 +29,7 @@ app.include_router(ws_router)
 
 
 @app.get("/health", tags=["Health"])
+@app.get("/api/health", include_in_schema=False)
 async def health() -> dict[str, str]:
     return {"status": "ok"}
 

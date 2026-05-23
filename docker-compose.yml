@@ -6,9 +6,12 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - frontend
-      - backend
-      - ml
+      frontend:
+        condition: service_started
+      backend:
+        condition: service_healthy
+      ml:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -43,6 +46,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
     restart: unless-stopped
 
   ml:
@@ -58,6 +67,12 @@ services:
       - CELERY_BROKER_URL=redis://redis:6379/2
     depends_on:
       - redis
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 5s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
     restart: unless-stopped
 
   celery_worker:
