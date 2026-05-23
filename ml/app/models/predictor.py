@@ -463,7 +463,7 @@ class LSTMPredictor:
         batch_sz = cast(int, pt_cfg["batch_size"])
         n_feat = X_seq.shape[2]
 
-        class _Net(nn.Module):  # type: ignore[misc]
+        class _Net(nn.Module):
             def __init__(self) -> None:
                 super().__init__()
                 self.lstm1 = nn.LSTM(n_feat, 64, batch_first=True, dropout=0.2, num_layers=1)
