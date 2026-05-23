@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { StockSearch } from "@/components/stock/StockSearch";
 import { StockOverview } from "@/components/stock/StockOverview";
@@ -8,14 +9,28 @@ import { AnalysisTabs } from "@/components/stock/AnalysisTabs";
 import { AuthModal } from "@/components/layout/AuthModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+<<<<<<< HEAD
 import { stocksApi, predictionsApi } from "@/lib/api";
+=======
+import { FullPageSpinner } from "@/components/ui/spinner";
+import { stocksApi, mlPredictApi } from "@/lib/api";
+>>>>>>> feature/FE-scanner
 import { useUIStore } from "@/store/ui";
 import { useAuthStore } from "@/store/auth";
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { selectedTicker, setSelectedTicker } = useUIStore();
   const { isAuthenticated } = useAuthStore();
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const searchParams = useSearchParams();
+  const tickerParam = searchParams.get("ticker");
+
+  useEffect(() => {
+    if (tickerParam) {
+      setSelectedTicker(tickerParam.toUpperCase());
+    }
+  }, [tickerParam, setSelectedTicker]);
 
   const { data: stockInfo, isLoading: stockLoading, error: stockError } = useQuery({
     queryKey: ["stock", selectedTicker],
@@ -109,5 +124,13 @@ export default function DashboardPage() {
       {/* 인증 모달 */}
       {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </div>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={<FullPageSpinner />}>
+      <DashboardContent />
+    </Suspense>
   );
 }
