@@ -99,8 +99,9 @@ EC2 한 대 안에서 아래 6개 컨테이너가 Docker로 돌아갑니다.
 
 | 단계 | 문서 | 해야 할 일 |
 |------|------|------------|
-| **1단계** | [P02_AWS_SETUP.md](./P02_AWS_SETUP.md) | AWS에 서버(EC2)와 데이터베이스(RDS) 만들기 + 첫 수동 배포 확인 |
-| **2단계** | [P03_CD_SETUP.md](./P03_CD_SETUP.md) | GitHub에 서버 접속 정보 등록 + 자동 배포 워크플로우 만들기 |
+| **0단계** | [P00_BEFORE_START.md](./P00_BEFORE_START.md) | AWS 계정 설정, IAM 사용자 생성, 비용 알림 등록 |
+| **1단계** | [P02_AWS.md](./P02_AWS.md) | AWS에 서버(EC2)와 데이터베이스(RDS) 만들기 + 첫 수동 배포 확인 |
+| **2단계** | [P03_CD.md](./P03_CD.md) | GitHub에 서버 접속 정보 등록 + 자동 배포 워크플로우 만들기 |
 | **3단계 이후** | [P04_IMPROVEMENTS.md](./P04_IMPROVEMENTS.md) | HTTPS 적용, CI 강화, 무중단 배포, 모니터링 |
 
 ---
@@ -109,11 +110,14 @@ EC2 한 대 안에서 아래 6개 컨테이너가 Docker로 돌아갑니다.
 
 완료할 때마다 `- [ ]`를 `- [x]`로 바꾸며 진행하세요.
 
-### 즉시 처리 (1~3단계)
+### 즉시 처리 (0~3단계)
 
+- [ ] AWS IAM 사용자 생성 (root 계정 대신 사용)
+- [ ] AWS Billing Alert 등록 (월 $80 초과 시 이메일 알림)
 - [ ] EC2 t3.medium 인스턴스 생성 및 보안 그룹 설정
-- [ ] RDS PostgreSQL 16 생성 (db.t3.micro, 퍼블릭 액세스 비활성화)
-- [ ] EC2 초기 환경 설정 (Docker 설치, 코드 클론, `.env` 작성)
+- [ ] Elastic IP 할당 및 EC2에 연결 (고정 IP 확보)
+- [ ] RDS PostgreSQL 16 생성 (db.t3.micro, 퍼블릭 액세스 비활성화, 삭제 방지 활성화)
+- [ ] EC2 초기 환경 설정 (Docker 설치, 타임존, 스왑, 코드 클론, `.env` 작성)
 - [ ] 첫 수동 배포 — 앱이 실제로 뜨는지 확인
 - [ ] GitHub Secrets 5개 등록 (서버 접속 정보)
 - [ ] GitHub `production` Environment 생성
@@ -140,10 +144,11 @@ EC2 한 대 안에서 아래 6개 컨테이너가 Docker로 돌아갑니다.
 
 | 파일 | 역할 |
 |------|------|
+| [`docs/infra/P00_BEFORE_START.md`](./P00_BEFORE_START.md) | AWS 계정·IAM·비용 설정 (0단계) |
 | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | CI 워크플로우 (이미 완성됨) |
-| `.github/workflows/cd.yml` | CD 워크플로우 (3단계에서 직접 만들 예정) |
+| `.github/workflows/cd.yml` | CD 워크플로우 (2단계에서 직접 만들 예정) |
 | [`infra/scripts/deploy.sh`](../infra/scripts/deploy.sh) | EC2에서 실행되는 배포 스크립트 (이미 완성됨) |
 | [`docker-compose.prod.yml`](../docker-compose.prod.yml) | 프로덕션용 Docker Compose 설정 (이미 완성됨) |
-| [`infra/nginx/nginx.conf`](../infra/nginx/nginx.conf) | Nginx 설정 (HTTP 완성, HTTPS는 4단계에서 활성화) |
+| [`infra/nginx/nginx.conf`](../infra/nginx/nginx.conf) | Nginx 설정 (HTTP 완성, HTTPS는 3단계에서 활성화) |
 | [`docs/LOCAL_TESTING_GUIDE.md`](./LOCAL_TESTING_GUIDE.md) | 로컬에서 통합 테스트 하는 방법 |
 | [`CONTRIBUTING.md`](../CONTRIBUTING.md) | 브랜치 이름 규칙, 커밋 컨벤션 |

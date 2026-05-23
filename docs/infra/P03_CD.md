@@ -1,6 +1,6 @@
 # CD 자동화 설정 가이드
 
-> **선행 조건**: [P02_AWS_SETUP.md](./P02_AWS_SETUP.md)를 완료해 EC2·RDS가 실행 중이고, 첫 수동 배포가 성공한 상태  
+> **선행 조건**: [P02_AWS.md](./P02_AWS.md)를 완료해 EC2·RDS가 실행 중이고, 첫 수동 배포가 성공한 상태  
 > **이 단계가 끝나면**: `main` 브랜치에 코드가 머지되면 자동으로 EC2에 배포됩니다.
 
 ---
@@ -116,6 +116,7 @@ jobs:
     name: Deploy to EC2
     runs-on: ubuntu-latest
     environment: production   # 3단계에서 만든 Environment 이름
+    timeout-minutes: 10       # 배포가 10분을 넘으면 자동 취소 (무한 대기 방지)
 
     steps:
       - name: SSH into EC2 and run deploy.sh
