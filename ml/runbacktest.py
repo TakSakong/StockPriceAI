@@ -9,7 +9,7 @@ from datetime import datetime
 from ml.app.models.predictor import EnsemblePredictor
 from ml.app.pipelines.fetcher import fetch_stock_data
 from ml.app.pipelines.technical import add_all_indicators
-from ml.app.pipelines.scanner import SP500_TICKERS
+from ml.app.pipelines.get_recent_SP500_tickers import get_sp500_tickers
 
 # 외부 패키지 의존성을 없애기 위한 간이 표 출력 함수
 def tabulate(data, headers=None, exclude=None):
@@ -136,7 +136,7 @@ COMMISSION_RATE = 0.001
 #    기본값: 실제 스캐너(scanner.py)에서 사용하는 SP500_TICKERS 전체
 #    일부만 사용하려면 리스트 형태로 직접 지정 가능
 #    예) TICKERS = ["AAPL", "MSFT", "NVDA"]
-TICKERS = SP500_TICKERS
+TICKERS = get_sp500_tickers()
 
 # ─────────────────────────────────────────────────────────────
 # 메인 실행 흐름 (수정 불필요)
