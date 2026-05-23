@@ -91,6 +91,7 @@ cd ../ml && poetry install && poetry shell
 1. `develop` 브랜치에서 작업 브랜치를 분기
 2. **작업 중 다른 팀원의 PR이 `develop`에 머지된 경우** (push 전 필수):
    ```bash
+   git checkout develop           # 로컬 develop 브랜치로 전환
    git pull origin develop        # 로컬 develop 최신화
    git checkout {내-작업-브랜치}
    git merge develop              # 개인 브랜치에 머지 & 충돌 해결
