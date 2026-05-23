@@ -27,12 +27,12 @@ export function TechnicalIndicatorsChart({ data }: TechnicalChartProps) {
         title: { text: "RSI (14)", font: { color: "#a0aec0", size: 14 } },
         gauge: {
           axis: { range: [0, 100], tickcolor: "#718096", tickfont: { color: "#718096" } },
-          bar: { color: rsi > 70 ? "#ef4444" : rsi < 30 ? "#10b981" : "#3b82f6" },
-          bgcolor: "#2d3748",
-          bordercolor: "#4a5568",
+          bar: { color: rsi > 70 ? "#ff1744" : rsi < 30 ? "#00c853" : "#3b82f6" },
+          bgcolor: "#1f2937",
+          bordercolor: "#2d3748",
           steps: [
-            { range: [0, 30], color: "#064e3b" },
-            { range: [70, 100], color: "#7f1d1d" },
+            { range: [0, 30], color: "rgba(0, 200, 83, 0.35)" },
+            { range: [70, 100], color: "rgba(255, 23, 68, 0.35)" },
           ],
           threshold: {
             line: { color: "#ffffff", width: 2 },
@@ -53,16 +53,16 @@ export function TechnicalIndicatorsChart({ data }: TechnicalChartProps) {
           bar: {
             color:
               (ind.stoch_k ?? 50) > 80
-                ? "#ef4444"
+                ? "#ff1744"
                 : (ind.stoch_k ?? 50) < 20
-                  ? "#10b981"
+                  ? "#00c853"
                   : "#3b82f6",
           },
-          bgcolor: "#2d3748",
-          bordercolor: "#4a5568",
+          bgcolor: "#1f2937",
+          bordercolor: "#2d3748",
           steps: [
-            { range: [0, 20], color: "#064e3b" },
-            { range: [80, 100], color: "#7f1d1d" },
+            { range: [0, 20], color: "rgba(0, 200, 83, 0.35)" },
+            { range: [80, 100], color: "rgba(255, 23, 68, 0.35)" },
           ],
         },
         domain: { x: [0.5, 1], y: [0, 1] },
