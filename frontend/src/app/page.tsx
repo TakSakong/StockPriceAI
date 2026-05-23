@@ -9,12 +9,8 @@ import { AnalysisTabs } from "@/components/stock/AnalysisTabs";
 import { AuthModal } from "@/components/layout/AuthModal";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-<<<<<<< HEAD
-import { stocksApi, predictionsApi } from "@/lib/api";
-=======
 import { FullPageSpinner } from "@/components/ui/spinner";
-import { stocksApi, mlPredictApi } from "@/lib/api";
->>>>>>> feature/FE-scanner
+import { stocksApi, predictionsApi } from "@/lib/api";
 import { useUIStore } from "@/store/ui";
 import { useAuthStore } from "@/store/auth";
 
