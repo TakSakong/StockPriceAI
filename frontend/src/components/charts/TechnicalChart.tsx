@@ -88,7 +88,7 @@ export function TechnicalIndicatorsChart({ data }: TechnicalChartProps) {
         mode: "number" as const,
         value: macd_hist,
         title: { text: "MACD Hist", font: { color: "#a0aec0", size: 15 } },
-        number: { 
+        number: {
           font: { color: macd_hist > 0 ? "#00c853" : "#ff1744", size: 24 },
           valueformat: ".3f"
         },
@@ -140,12 +140,12 @@ export function TechnicalIndicatorsChart({ data }: TechnicalChartProps) {
       margin: { t: 60, r: 20, b: 40, l: 20 },
       height: 480,
       annotations: [
-        { x: 0.15, y: 0.58, xref: 'paper', yref: 'paper', text: "30 이하: 과매도 / 70 이상: 과매수", showarrow: false, font: { size: 10, color: "#718096" } },
-        { x: 0.5, y: 0.58, xref: 'paper', yref: 'paper', text: "20 이하: 과매도 / 80 이상: 과매수", showarrow: false, font: { size: 10, color: "#718096" } },
-        { x: 0.85, y: 0.58, xref: 'paper', yref: 'paper', text: "-80 이하: 과매도 / -20 이상: 과매수", showarrow: false, font: { size: 10, color: "#718096" } },
-        { x: 0.15, y: -0.05, xref: 'paper', yref: 'paper', text: "양수: 상승 추세 / 음수: 하락 추세", showarrow: false, font: { size: 10, color: "#718096" } },
-        { x: 0.5, y: -0.05, xref: 'paper', yref: 'paper', text: "0 근접: 하단 / 1 근접: 상단", showarrow: false, font: { size: 10, color: "#718096" } },
-        { x: 0.85, y: -0.05, xref: 'paper', yref: 'paper', text: "1.5 이상: 거래량 급증", showarrow: false, font: { size: 10, color: "#718096" } }
+        { x: 0.15, y: 0.58, xref: 'paper' as const, yref: 'paper' as const, text: "30 이하: 과매도 / 70 이상: 과매수", showarrow: false, font: { size: 10, color: "#718096" } },
+        { x: 0.5, y: 0.58, xref: 'paper' as const, yref: 'paper' as const, text: "20 이하: 과매도 / 80 이상: 과매수", showarrow: false, font: { size: 10, color: "#718096" } },
+        { x: 0.85, y: 0.58, xref: 'paper' as const, yref: 'paper' as const, text: "-80 이하: 과매도 / -20 이상: 과매수", showarrow: false, font: { size: 10, color: "#718096" } },
+        { x: 0.15, y: -0.05, xref: 'paper' as const, yref: 'paper' as const, text: "양수: 상승 추세 / 음수: 하락 추세", showarrow: false, font: { size: 10, color: "#718096" } },
+        { x: 0.5, y: -0.05, xref: 'paper' as const, yref: 'paper' as const, text: "0 근접: 하단 / 1 근접: 상단", showarrow: false, font: { size: 10, color: "#718096" } },
+        { x: 0.85, y: -0.05, xref: 'paper' as const, yref: 'paper' as const, text: "1.5 이상: 거래량 급증", showarrow: false, font: { size: 10, color: "#718096" } }
       ]
     }),
     [],
