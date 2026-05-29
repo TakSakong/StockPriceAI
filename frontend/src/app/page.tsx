@@ -163,11 +163,6 @@ function DashboardContent() {
             AI 기반 예측 · 기술적 지표 · 감성 분석
           </p>
         </div>
-        {!isAuthenticated && (
-          <Button variant="secondary" size="sm" onClick={() => setShowAuthModal(true)}>
-            로그인
-          </Button>
-        )}
       </div>
 
       {/* 검색 */}
